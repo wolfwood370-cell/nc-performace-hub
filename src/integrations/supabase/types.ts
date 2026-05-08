@@ -2680,7 +2680,7 @@ export type Database = {
       ticket_category: "bug" | "feature_request" | "billing" | "other"
       ticket_status: "new" | "in_progress" | "resolved" | "closed"
       user_role: "coach" | "athlete"
-      workout_log_status: "scheduled" | "completed" | "missed"
+      workout_log_status: "scheduled" | "completed" | "missed" | "in_progress"
       workout_status: "pending" | "in_progress" | "completed" | "skipped"
     }
     CompositeTypes: {
@@ -2834,7 +2834,7 @@ export const Constants = {
       ticket_category: ["bug", "feature_request", "billing", "other"],
       ticket_status: ["new", "in_progress", "resolved", "closed"],
       user_role: ["coach", "athlete"],
-      workout_log_status: ["scheduled", "completed", "missed"],
+      workout_log_status: ["scheduled", "completed", "missed", "in_progress"],
       workout_status: ["pending", "in_progress", "completed", "skipped"],
     },
   },

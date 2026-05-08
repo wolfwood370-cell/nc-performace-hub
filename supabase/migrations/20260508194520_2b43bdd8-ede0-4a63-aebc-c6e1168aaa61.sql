@@ -1,0 +1,1 @@
+ALTER TYPE public.workout_log_status ADD VALUE IF NOT EXISTS 'in_progress';
