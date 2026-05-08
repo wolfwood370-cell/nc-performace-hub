@@ -43,6 +43,7 @@ const AthleteCopilotIntervention = lazy(() => import("./pages/athlete/AthleteCop
 const AthleteMealAnalysis = lazy(() => import("./pages/athlete/AthleteMealAnalysis"));
 const PaymentSuccess = lazy(() => import("./pages/athlete/PaymentSuccess"));
 const WorkoutDebrief = lazy(() => import("./pages/athlete/WorkoutDebrief"));
+const SupersetExecution = lazy(() => import("./pages/athlete/SupersetExecution"));
 const ActiveWorkout = lazy(() => import("./pages/athlete/ActiveWorkout"));
 const AthleteReadinessDetails = lazy(() => import("./pages/athlete/AthleteReadinessDetails"));
 const DailyCheckin = lazy(() => import("./pages/athlete/DailyCheckin"));
@@ -135,6 +136,7 @@ const App = () => (
                 <Route path="meal-analysis" element={<AthleteMealAnalysis />} />
                 <Route path="payment-success" element={<PaymentSuccess />} />
                 <Route path="workout/debrief" element={<WorkoutDebrief />} />
+                <Route path="workout/superset" element={<SupersetExecution />} />
               </Route>
               {/* Legacy redirect */}
               <Route path="/athlete/workout" element={<Navigate to="/athlete/training" replace />} />
