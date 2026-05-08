@@ -40,7 +40,60 @@ interface ReviewWorkoutItemProps {
   srpe: number | null;
   athleteNotes: string | null;
   existingFeedback: string | null;
+  exercisesData: unknown;
   onSaved: () => void;
+}
+
+interface ParsedSet {
+  set_number: number;
+  weight_kg: number | null;
+  reps: number | null;
+  rpe: number | null;
+  completed: boolean;
+}
+
+interface ParsedExercise {
+  name: string;
+  sets: ParsedSet[];
+  notes?: string;
+}
+
+function parseExecutionLog(raw: unknown): ParsedExercise[] | null {
+  if (!raw || !Array.isArray(raw)) return null;
+  const parsed: ParsedExercise[] = [];
+  for (const ex of raw as Array<Record<string, unknown>>) {
+    if (!ex || typeof ex !== "object") continue;
+    const name =
+      (ex.exercise_name as string) ||
+      (ex.name as string) ||
+      "Esercizio";
+    const rawSets = (ex.sets_data as unknown) ?? (ex.sets as unknown);
+    if (!Array.isArray(rawSets)) continue;
+    const sets: ParsedSet[] = rawSets
+      .filter((s) => s && typeof s === "object")
+      .map((s, idx) => {
+        const r = s as Record<string, unknown>;
+        return {
+          set_number: typeof r.set_number === "number" ? r.set_number : idx + 1,
+          weight_kg:
+            typeof r.weight_kg === "number"
+              ? r.weight_kg
+              : typeof r.kg === "number"
+              ? r.kg
+              : null,
+          reps: typeof r.reps === "number" ? r.reps : null,
+          rpe: typeof r.rpe === "number" ? r.rpe : null,
+          completed: r.completed !== false,
+        };
+      });
+    if (sets.length === 0) continue;
+    parsed.push({
+      name,
+      sets,
+      notes: typeof ex.notes === "string" ? (ex.notes as string) : undefined,
+    });
+  }
+  return parsed.length > 0 ? parsed : null;
 }
 
 function ReviewWorkoutItem({
@@ -50,11 +103,13 @@ function ReviewWorkoutItem({
   srpe,
   athleteNotes,
   existingFeedback,
+  exercisesData,
   onSaved,
 }: ReviewWorkoutItemProps) {
   const [feedback, setFeedback] = useState(existingFeedback ?? "");
   const review = useReviewWorkout();
   const reviewed = !!existingFeedback;
+  const execution = useMemo(() => parseExecutionLog(exercisesData), [exercisesData]);
 
   const handleSubmit = async () => {
     await review.mutateAsync({ logId, feedback });
@@ -79,6 +134,71 @@ function ReviewWorkoutItem({
           )}
         </div>
       </div>
+
+      {/* Execution Table */}
+      <div className="rounded border border-border/50 bg-background/60 overflow-hidden">
+        <div className="px-2 py-1.5 border-b border-border/50 bg-muted/40 flex items-center gap-1.5">
+          <Dumbbell className="h-3 w-3 text-primary" />
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Esecuzione
+          </span>
+        </div>
+        {execution ? (
+          <div className="divide-y divide-border/40">
+            {execution.map((ex, idx) => (
+              <div key={idx} className="p-2 space-y-1.5">
+                <p className="text-[11px] font-semibold text-foreground truncate">
+                  {ex.name}
+                </p>
+                <table className="w-full text-[10px]">
+                  <thead>
+                    <tr className="text-muted-foreground">
+                      <th className="text-left font-medium py-0.5 w-8">Set</th>
+                      <th className="text-right font-medium py-0.5">Kg</th>
+                      <th className="text-right font-medium py-0.5">Reps</th>
+                      <th className="text-right font-medium py-0.5">RPE</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ex.sets.map((s, sIdx) => (
+                      <tr
+                        key={sIdx}
+                        className={cn(
+                          "border-t border-border/30",
+                          !s.completed && "opacity-50"
+                        )}
+                      >
+                        <td className="py-0.5 font-mono text-muted-foreground">
+                          {s.set_number}
+                        </td>
+                        <td className="py-0.5 text-right font-mono tabular-nums">
+                          {s.weight_kg != null ? s.weight_kg : "—"}
+                        </td>
+                        <td className="py-0.5 text-right font-mono tabular-nums">
+                          {s.reps != null ? s.reps : "—"}
+                        </td>
+                        <td className="py-0.5 text-right font-mono tabular-nums">
+                          {s.rpe != null ? s.rpe : "—"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {ex.notes && (
+                  <p className="text-[10px] text-muted-foreground italic pt-0.5">
+                    {ex.notes}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="px-2 py-3 text-[10px] text-muted-foreground text-center italic">
+            Nessun log dettagliato fornito
+          </p>
+        )}
+      </div>
+
       {athleteNotes && (
         <p className="text-[11px] text-muted-foreground italic">"{athleteNotes}"</p>
       )}
@@ -159,7 +279,7 @@ export function AthleteViewerDialog({
     queryFn: async () => {
       const { data } = await supabase
         .from("workout_logs")
-        .select("id, workout_id, rpe_global, srpe, notes, coach_feedback, completed_at, workouts(title)")
+        .select("id, workout_id, rpe_global, srpe, notes, coach_feedback, completed_at, exercises_data, workouts(title)")
         .eq("athlete_id", athleteId)
         .eq("status", "completed")
         .gte("completed_at", `${todayDate}T00:00:00`)
@@ -387,6 +507,7 @@ export function AthleteViewerDialog({
                         srpe={log.srpe}
                         athleteNotes={log.notes}
                         existingFeedback={log.coach_feedback}
+                        exercisesData={log.exercises_data}
                         onSaved={() => refetchLogs()}
                       />
                     ))
