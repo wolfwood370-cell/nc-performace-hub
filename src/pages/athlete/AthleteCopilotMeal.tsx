@@ -199,43 +199,55 @@ const AthleteCopilotMeal = () => {
         <section className="bg-white/70 backdrop-blur-xl rounded-[32px] p-2 border border-surface-variant shadow-sm relative">
           <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-1/3 bg-primary rounded-r-full opacity-60" />
 
-          <div className="relative w-full h-[220px] rounded-[28px] overflow-hidden mb-4">
-            <img
-              src={suggestion.imageUrl}
-              alt={suggestion.name}
-              className="w-full h-full object-cover"
-              loading="lazy"
-            />
-            <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-sm">
-              <Sparkles className="text-primary size-4" />
-              <span className="text-xs font-bold text-primary uppercase">
-                Suggerimento Copilot
+          {isGenerating || !suggestion ? (
+            <div className="w-full h-[360px] flex flex-col items-center justify-center gap-3 text-secondary">
+              <Loader2 className="size-6 animate-spin text-primary" />
+              <span className="text-xs font-bold uppercase tracking-widest">
+                {isGenerating ? "AI sta pensando..." : "In attesa..."}
               </span>
             </div>
-          </div>
+          ) : (
+            <>
+              <div className="relative w-full h-[220px] rounded-[28px] overflow-hidden mb-4">
+                <img
+                  src={suggestion.imageUrl}
+                  alt={suggestion.name}
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                />
+                <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-sm">
+                  <Sparkles className="text-primary size-4" />
+                  <span className="text-xs font-bold text-primary uppercase">
+                    Suggerimento Copilot
+                  </span>
+                </div>
+              </div>
 
-          <div className="px-4 pb-4 flex flex-col gap-3">
-            <h3 className="font-display text-lg font-bold text-on-surface leading-tight">
-              {suggestion.name}
-            </h3>
-            <p className="text-sm text-secondary">
-              Prep: {suggestion.prepMinutes} min • Match perfetto dei macro
-            </p>
-            <div className="flex gap-2 mt-2 flex-wrap">
-              {[
-                `Pro: ${suggestion.protein}g`,
-                `Grassi: ${suggestion.fats}g`,
-                `Carb: ${suggestion.carbs}g`,
-              ].map((tag) => (
-                <span
-                  key={tag}
-                  className="bg-surface text-secondary px-3 py-1 rounded-full font-bold text-xs border border-surface-variant/50"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-          </div>
+              <div className="px-4 pb-4 flex flex-col gap-3">
+                <h3 className="font-display text-lg font-bold text-on-surface leading-tight">
+                  {suggestion.name}
+                </h3>
+                <p className="text-sm text-secondary">
+                  Prep: {suggestion.prepMinutes} min • Match perfetto dei macro
+                </p>
+                <div className="flex gap-2 mt-2 flex-wrap">
+                  {[
+                    `Pro: ${suggestion.protein}g`,
+                    `Grassi: ${suggestion.fats}g`,
+                    `Carb: ${suggestion.carbs}g`,
+                    `${suggestion.calories} kcal`,
+                  ].map((tag) => (
+                    <span
+                      key={tag}
+                      className="bg-surface text-secondary px-3 py-1 rounded-full font-bold text-xs border border-surface-variant/50"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
         </section>
       </main>
 
@@ -244,20 +256,22 @@ const AthleteCopilotMeal = () => {
         <button
           type="button"
           onClick={handleRegenerate}
-          className="w-full max-w-md mx-auto py-4 text-secondary font-bold text-xs uppercase tracking-widest hover:bg-surface-container-low rounded-full transition-colors"
+          disabled={isGenerating}
+          className="w-full max-w-md mx-auto py-4 text-secondary font-bold text-xs uppercase tracking-widest hover:bg-surface-container-low rounded-full transition-colors disabled:opacity-50"
         >
-          Genera un'altra opzione
+          {isGenerating ? "Generazione in corso..." : "Genera un'altra opzione"}
         </button>
         <button
           type="button"
           onClick={() => logMutation.mutate()}
-          disabled={logMutation.isPending}
+          disabled={logMutation.isPending || !suggestion || isGenerating}
           className="w-full max-w-md mx-auto bg-primary text-white rounded-full py-4 flex justify-center items-center gap-2 font-bold text-xs uppercase tracking-widest shadow-lg active:scale-95 transition-transform disabled:opacity-60"
         >
           <CheckCircle className="size-4" />
           {logMutation.isPending ? "Salvataggio..." : "Registra questo pasto"}
         </button>
       </div>
+
     </div>
   );
 };
