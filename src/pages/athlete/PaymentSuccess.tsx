@@ -42,12 +42,10 @@ const PaymentSuccess = () => {
         setLoading(false);
         return;
       }
-      // Pull the most recent active subscription joined with its plan.
+      // Pull the most recent subscription, then resolve the linked plan.
       const { data: sub } = await supabase
         .from("athlete_subscriptions")
-        .select(
-          "id, status, current_period_end, created_at, plan:billing_plans(name, price_amount, currency, billing_interval)"
-        )
+        .select("id, status, current_period_end, created_at, plan_id")
         .eq("athlete_id", user.id)
         .order("created_at", { ascending: false })
         .limit(1)
@@ -56,12 +54,20 @@ const PaymentSuccess = () => {
       if (cancelled) return;
 
       if (sub) {
-        const plan = (sub.plan ?? {}) as {
+        let plan: {
           name?: string;
           price_amount?: number;
           currency?: string;
           billing_interval?: string;
-        };
+        } = {};
+        if (sub.plan_id) {
+          const { data: planRow } = await supabase
+            .from("billing_plans")
+            .select("name, price_amount, currency, billing_interval")
+            .eq("id", sub.plan_id)
+            .maybeSingle();
+          plan = planRow ?? {};
+        }
         const renewal = sub.current_period_end
           ? new Date(sub.current_period_end as string)
           : null;
