@@ -9,6 +9,8 @@ import {
 } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -22,10 +24,14 @@ import {
   Scale,
   Utensils,
   AlertTriangle,
+  MessageSquare,
+  Send,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
+import { useReviewWorkout } from "@/hooks/useReviewWorkout";
 
 interface AthleteViewerDialogProps {
   athleteId: string;
@@ -67,6 +73,23 @@ export function AthleteViewerDialog({
         .eq("athlete_id", athleteId)
         .eq("scheduled_date", todayDate)
         .order("created_at", { ascending: true });
+      return data || [];
+    },
+    enabled: open && !!athleteId,
+  });
+
+  // Fetch completed workout logs for today (review queue)
+  const { data: completedLogs = [], isLoading: logsLoading, refetch: refetchLogs } = useQuery({
+    queryKey: ["god-mode-workout-logs", athleteId, todayDate],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("workout_logs")
+        .select("id, workout_id, rpe_global, srpe, notes, coach_feedback, completed_at, workouts(title)")
+        .eq("athlete_id", athleteId)
+        .eq("status", "completed")
+        .gte("completed_at", `${todayDate}T00:00:00`)
+        .lte("completed_at", `${todayDate}T23:59:59`)
+        .order("completed_at", { ascending: false });
       return data || [];
     },
     enabled: open && !!athleteId,
@@ -269,7 +292,35 @@ export function AthleteViewerDialog({
               </CardContent>
             </Card>
 
-            {/* ===== NUTRITION SUMMARY ===== */}
+            {/* ===== REVIEW QUEUE ===== */}
+            {(logsLoading || completedLogs.length > 0) && (
+              <Card>
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <MessageSquare className="h-4 w-4 text-primary" />
+                    <h3 className="text-sm font-semibold">Feedback Coach</h3>
+                  </div>
+                  {logsLoading ? (
+                    <Skeleton className="h-20 w-full" />
+                  ) : (
+                    completedLogs.map((log) => (
+                      <ReviewWorkoutItem
+                        key={log.id}
+                        logId={log.id}
+                        title={(log.workouts as { title?: string } | null)?.title ?? "Allenamento"}
+                        rpe={log.rpe_global}
+                        srpe={log.srpe}
+                        athleteNotes={log.notes}
+                        existingFeedback={log.coach_feedback}
+                        onSaved={() => refetchLogs()}
+                      />
+                    ))
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center gap-2 mb-3">
@@ -346,5 +397,80 @@ export function AthleteViewerDialog({
         </ScrollArea>
       </DialogContent>
     </Dialog>
+  );
+}
+
+interface ReviewWorkoutItemProps {
+  logId: string;
+  title: string;
+  rpe: number | null;
+  srpe: number | null;
+  athleteNotes: string | null;
+  existingFeedback: string | null;
+  onSaved: () => void;
+}
+
+function ReviewWorkoutItem({
+  logId,
+  title,
+  rpe,
+  srpe,
+  athleteNotes,
+  existingFeedback,
+  onSaved,
+}: ReviewWorkoutItemProps) {
+  const [feedback, setFeedback] = useState(existingFeedback ?? "");
+  const review = useReviewWorkout();
+  const reviewed = !!existingFeedback;
+
+  const handleSubmit = async () => {
+    await review.mutateAsync({ logId, feedback });
+    onSaved();
+  };
+
+  return (
+    <div className="rounded-md border border-border/60 p-3 space-y-2 bg-muted/20">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs font-semibold truncate">{title}</p>
+        <div className="flex items-center gap-1">
+          {rpe != null && (
+            <Badge variant="secondary" className="text-[10px]">RPE {rpe}</Badge>
+          )}
+          {srpe != null && (
+            <Badge variant="outline" className="text-[10px]">sRPE {srpe}</Badge>
+          )}
+          {reviewed && (
+            <Badge variant="default" className="text-[10px] bg-success text-success-foreground">
+              Recensito
+            </Badge>
+          )}
+        </div>
+      </div>
+      {athleteNotes && (
+        <p className="text-[11px] text-muted-foreground italic">"{athleteNotes}"</p>
+      )}
+      <Textarea
+        value={feedback}
+        onChange={(e) => setFeedback(e.target.value)}
+        placeholder="Scrivi il tuo feedback per l'atleta..."
+        className="min-h-[64px] text-xs"
+        maxLength={500}
+      />
+      <div className="flex justify-end">
+        <Button
+          size="sm"
+          onClick={handleSubmit}
+          disabled={review.isPending || !feedback.trim()}
+          className="h-8 text-xs"
+        >
+          {review.isPending ? (
+            <Loader2 className="h-3 w-3 animate-spin mr-1" />
+          ) : (
+            <Send className="h-3 w-3 mr-1" />
+          )}
+          {reviewed ? "Aggiorna" : "Invia Feedback"}
+        </Button>
+      </div>
+    </div>
   );
 }
