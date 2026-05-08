@@ -1,6 +1,6 @@
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, MoreVertical, TrendingDown } from "lucide-react";
+import { ArrowLeft, MoreVertical, TrendingDown, TrendingUp, Minus } from "lucide-react";
 import {
   LineChart,
   Line,
@@ -10,39 +10,91 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from "recharts";
+import { format, parseISO } from "date-fns";
+import { it } from "date-fns/locale";
+import { useAthleteWeightHistory } from "@/hooks/useAthleteWeightHistory";
+import {
+  computeWeightTrend,
+  sliceByFilter,
+  trendAtDaysAgo,
+  type WeightFilter,
+} from "@/lib/math/biometrics";
+import { LoadingSpinner } from "@/components/LoadingSpinner";
 
-type TimeFilter = "1W" | "1M" | "3M" | "6M" | "1Y" | "ALL";
+const TIME_FILTERS: WeightFilter[] = ["1W", "1M", "3M", "6M", "1Y", "ALL"];
 
-const TIME_FILTERS: TimeFilter[] = ["1W", "1M", "3M", "6M", "1Y", "ALL"];
+const formatKg = (v: number | null | undefined) =>
+  v == null ? "—" : `${v >= 0 ? "" : ""}${v.toFixed(1)} kg`;
 
-// Dummy data illustrating jagged scale weight vs smooth trend curve
-const CHART_DATA = [
-  { day: 1, scale: 115.3, trend: 115.3 },
-  { day: 5, scale: 116.1, trend: 115.2 },
-  { day: 10, scale: 114.8, trend: 115.0 },
-  { day: 15, scale: 115.6, trend: 114.85 },
-  { day: 20, scale: 114.2, trend: 114.7 },
-  { day: 25, scale: 115.0, trend: 114.55 },
-  { day: 30, scale: 113.9, trend: 114.4 },
-  { day: 40, scale: 114.5, trend: 114.2 },
-  { day: 50, scale: 113.7, trend: 114.0 },
-  { day: 60, scale: 114.1, trend: 113.85 },
-  { day: 70, scale: 113.5, trend: 113.7 },
-  { day: 80, scale: 114.0, trend: 113.55 },
-  { day: 90, scale: 113.2, trend: 113.4 },
-];
+const formatDelta = (v: number | null) =>
+  v == null ? "—" : `${v > 0 ? "+" : ""}${v.toFixed(1)} kg`;
 
-const WEIGHT_CHANGES = [
-  { label: "3 Giorni", delta: "-0.2 kg" },
-  { label: "7 Giorni", delta: "-0.5 kg" },
-  { label: "30 Giorni", delta: "-1.8 kg" },
-];
+const DeltaIcon = ({ value }: { value: number | null }) => {
+  if (value == null || Math.abs(value) < 0.05) return <Minus size={16} />;
+  return value < 0 ? <TrendingDown size={16} /> : <TrendingUp size={16} />;
+};
 
 const AthleteWeightAnalytics = () => {
   const navigate = useNavigate();
-  const [activeFilter, setActiveFilter] = useState<TimeFilter>("3M");
+  const [activeFilter, setActiveFilter] = useState<WeightFilter>("3M");
 
-  const data = useMemo(() => CHART_DATA, []);
+  const { data: history = [], isLoading } = useAthleteWeightHistory();
+
+  // Build the EWMA trend over the FULL dataset, then slice for display so that
+  // the trend line at the start of the visible window remains continuous.
+  const fullTrend = useMemo(() => computeWeightTrend(history), [history]);
+  const visible = useMemo(
+    () => sliceByFilter(fullTrend, activeFilter),
+    [fullTrend, activeFilter],
+  );
+
+  const chartData = useMemo(
+    () =>
+      visible.map((p) => ({
+        date: p.date,
+        scale: p.scale,
+        trend: p.trend,
+        label: format(parseISO(p.date), "d MMM", { locale: it }),
+      })),
+    [visible],
+  );
+
+  const currentTrend = visible.length ? visible[visible.length - 1].trend : null;
+  const startTrend = visible.length ? visible[0].trend : null;
+  const periodDelta =
+    currentTrend != null && startTrend != null ? currentTrend - startTrend : null;
+
+  const dateRange = useMemo(() => {
+    if (visible.length < 2) return "";
+    const first = format(parseISO(visible[0].date), "d MMM", { locale: it });
+    const last = format(parseISO(visible[visible.length - 1].date), "d MMM yyyy", { locale: it });
+    return `${first} - ${last}`;
+  }, [visible]);
+
+  const changes = useMemo(() => {
+    const points = [
+      { label: "3 Giorni", days: 3 },
+      { label: "7 Giorni", days: 7 },
+      { label: "30 Giorni", days: 30 },
+    ];
+    return points.map((p) => {
+      if (currentTrend == null) return { ...p, delta: null as number | null };
+      const past = trendAtDaysAgo(fullTrend, p.days);
+      return {
+        ...p,
+        delta: past == null ? null : Number((currentTrend - past).toFixed(2)),
+      };
+    });
+  }, [fullTrend, currentTrend]);
+
+  if (isLoading) return <LoadingSpinner />;
+
+  const deltaColorClass =
+    periodDelta == null
+      ? "text-secondary"
+      : periodDelta < 0
+        ? "text-secondary"
+        : "text-on-surface";
 
   return (
     <div className="min-h-screen bg-surface text-on-surface">
@@ -77,17 +129,17 @@ const AthleteWeightAnalytics = () => {
           </span>
           <div className="flex items-baseline justify-center gap-2">
             <span className="font-display text-5xl font-bold text-primary">
-              114.2
+              {currentTrend != null ? currentTrend.toFixed(1) : "—"}
             </span>
             <span className="text-on-surface-variant">kg</span>
           </div>
           <div className="flex items-center gap-2 mt-2">
-            <div className="bg-surface-container flex items-center gap-1 px-3 py-1 rounded-full text-secondary">
-              <TrendingDown size={16} />
-              <span className="font-semibold text-xs">-1.1 kg</span>
+            <div className={`bg-surface-container flex items-center gap-1 px-3 py-1 rounded-full ${deltaColorClass}`}>
+              <DeltaIcon value={periodDelta} />
+              <span className="font-semibold text-xs">{formatDelta(periodDelta)}</span>
             </div>
           </div>
-          <p className="text-sm text-outline mt-3">2 Feb - 2 Mag 2026</p>
+          {dateRange && <p className="text-sm text-outline mt-3">{dateRange}</p>}
         </section>
 
         {/* 4. Time Filters */}
@@ -115,65 +167,62 @@ const AthleteWeightAnalytics = () => {
           <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white/40 to-transparent pointer-events-none" />
 
           <div className="h-48 relative">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart
-                data={data}
-                margin={{ top: 8, right: 8, bottom: 0, left: 0 }}
-              >
-                <CartesianGrid
-                  stroke="hsl(var(--surface-variant))"
-                  strokeDasharray="3 3"
-                  vertical={false}
-                />
-                <XAxis dataKey="day" hide />
-                <YAxis hide domain={["dataMin - 0.5", "dataMax + 0.5"]} />
-                <Tooltip
-                  contentStyle={{
-                    background: "hsl(var(--surface))",
-                    border: "1px solid hsl(var(--surface-variant))",
-                    borderRadius: "0.75rem",
-                    fontSize: "12px",
-                  }}
-                  labelFormatter={(v) => `Giorno ${v}`}
-                  formatter={(value: number, name: string) => [
-                    `${value.toFixed(1)} kg`,
-                    name === "scale" ? "Peso Bilancia" : "Trend Calcolato",
-                  ]}
-                />
-                {/* Jagged scale weight */}
-                <Line
-                  type="linear"
-                  dataKey="scale"
-                  stroke="hsl(var(--outline-variant))"
-                  strokeWidth={1.5}
-                  dot={false}
-                  isAnimationActive={false}
-                />
-                {/* Smooth trend curve */}
-                <Line
-                  type="monotone"
-                  dataKey="trend"
-                  stroke="hsl(var(--primary))"
-                  strokeWidth={4}
-                  dot={false}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            {chartData.length === 0 ? (
+              <div className="h-full flex items-center justify-center text-sm text-on-surface-variant">
+                Nessun dato peso registrato in questo intervallo.
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+                  <CartesianGrid
+                    stroke="hsl(var(--surface-variant))"
+                    strokeDasharray="3 3"
+                    vertical={false}
+                  />
+                  <XAxis dataKey="label" hide />
+                  <YAxis hide domain={["dataMin - 0.5", "dataMax + 0.5"]} />
+                  <Tooltip
+                    contentStyle={{
+                      background: "hsl(var(--surface))",
+                      border: "1px solid hsl(var(--surface-variant))",
+                      borderRadius: "0.75rem",
+                      fontSize: "12px",
+                    }}
+                    labelFormatter={(v) => String(v)}
+                    formatter={(value: number, name: string) => [
+                      `${value.toFixed(1)} kg`,
+                      name === "scale" ? "Peso Bilancia" : "Trend Calcolato",
+                    ]}
+                  />
+                  <Line
+                    type="linear"
+                    dataKey="scale"
+                    stroke="hsl(var(--outline-variant))"
+                    strokeWidth={1.5}
+                    dot={false}
+                    isAnimationActive={false}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="trend"
+                    stroke="hsl(var(--primary))"
+                    strokeWidth={4}
+                    dot={false}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
           </div>
 
           {/* Legend */}
           <div className="flex items-center justify-center gap-6 mt-6 pt-4 border-t border-surface-variant/50">
             <div className="flex items-center gap-2">
               <span className="w-3 h-3 rounded-full bg-outline-variant" />
-              <span className="text-xs text-on-surface-variant">
-                Peso Bilancia
-              </span>
+              <span className="text-xs text-on-surface-variant">Peso Bilancia</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="w-3 h-3 rounded-full bg-primary" />
-              <span className="text-xs text-on-surface-variant">
-                Trend Calcolato
-              </span>
+              <span className="text-xs text-on-surface-variant">Trend Calcolato</span>
             </div>
           </div>
         </div>
@@ -184,23 +233,31 @@ const AthleteWeightAnalytics = () => {
             Cambiamenti Peso
           </h2>
           <div className="flex flex-col">
-            {WEIGHT_CHANGES.map((row, idx) => (
-              <div
-                key={row.label}
-                className={
-                  "flex justify-between items-center py-3" +
-                  (idx < WEIGHT_CHANGES.length - 1
-                    ? " border-b border-surface-variant/50"
-                    : "")
-                }
-              >
-                <span className="text-on-surface font-medium">{row.label}</span>
-                <div className="flex items-center gap-1 text-secondary">
-                  <TrendingDown size={16} />
-                  <span className="font-bold">{row.delta}</span>
+            {changes.map((row, idx) => {
+              const colorClass =
+                row.delta == null
+                  ? "text-on-surface-variant"
+                  : row.delta < 0
+                    ? "text-secondary"
+                    : "text-on-surface";
+              return (
+                <div
+                  key={row.label}
+                  className={
+                    "flex justify-between items-center py-3" +
+                    (idx < changes.length - 1
+                      ? " border-b border-surface-variant/50"
+                      : "")
+                  }
+                >
+                  <span className="text-on-surface font-medium">{row.label}</span>
+                  <div className={`flex items-center gap-1 ${colorClass}`}>
+                    <DeltaIcon value={row.delta} />
+                    <span className="font-bold">{formatDelta(row.delta)}</span>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </main>
