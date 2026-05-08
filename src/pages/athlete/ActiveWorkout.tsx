@@ -22,6 +22,7 @@ function formatTimer(seconds: number): string {
 
 export default function ActiveWorkout() {
   const navigate = useNavigate();
+  useWorkoutAutosave();
   const [exitOpen, setExitOpen] = useState(false);
 
   const startedAt = useActiveSessionStore((s) => s.startedAt);
