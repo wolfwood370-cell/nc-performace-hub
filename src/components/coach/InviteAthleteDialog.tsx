@@ -13,7 +13,6 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Form,
   FormControl,
@@ -27,8 +26,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
 const inviteFormSchema = z.object({
-  firstName: z.string().min(1, "Il nome è obbligatorio"),
-  lastName: z.string().min(1, "Il cognome è obbligatorio"),
+  firstName: z
+    .string()
+    .min(1, "Il nome è obbligatorio")
+    .max(60, "Il nome è troppo lungo"),
+  lastName: z
+    .string()
+    .min(1, "Il cognome è obbligatorio")
+    .max(60, "Il cognome è troppo lungo"),
   email: z.string().email("Indirizzo email non valido"),
 });
 
@@ -39,6 +44,37 @@ interface InviteAthleteDialogProps {
   trigger?: React.ReactNode;
 }
 
+function describeInviteError(error: unknown): string {
+  if (!error) return "Impossibile invitare l'atleta. Riprova.";
+
+  const message =
+    error instanceof Error
+      ? error.message
+      : typeof error === "string"
+      ? error
+      : "Impossibile invitare l'atleta. Riprova.";
+
+  const lower = message.toLowerCase();
+
+  if (
+    lower.includes("already exists") ||
+    lower.includes("user_already_exists") ||
+    lower.includes("already been registered")
+  ) {
+    return "Esiste già un account con questa email.";
+  }
+
+  if (lower.includes("rate") && lower.includes("limit")) {
+    return "Troppi inviti inviati. Riprova tra qualche minuto.";
+  }
+
+  if (lower.includes("only coaches")) {
+    return "Solo i coach possono invitare atleti.";
+  }
+
+  return message;
+}
+
 export function InviteAthleteDialog({
   onAthleteInvited,
   trigger,
@@ -46,7 +82,7 @@ export function InviteAthleteDialog({
   const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
 
   const form = useForm<InviteFormData>({
     resolver: zodResolver(inviteFormSchema),
@@ -70,34 +106,44 @@ export function InviteAthleteDialog({
     setIsSubmitting(true);
 
     try {
-      // 1. Create the invite token
-      const { error } = await supabase.from("invite_tokens").insert({
-        coach_id: user.id,
-        email: data.email.toLowerCase().trim(),
-        full_name: `${data.firstName} ${data.lastName}`,
-      });
+      const athleteEmail = data.email.toLowerCase().trim();
+      const firstName = data.firstName.trim();
+      const lastName = data.lastName.trim();
+
+      const { data: result, error } = await supabase.functions.invoke(
+        "invite-athlete",
+        {
+          body: {
+            athleteEmail,
+            firstName,
+            lastName,
+          },
+        },
+      );
 
       if (error) {
-        throw error;
+        let serverMessage: string | undefined;
+        try {
+          const ctx = (error as { context?: Response }).context;
+          if (ctx && typeof ctx.json === "function") {
+            const body = await ctx.json();
+            if (body && typeof body.error === "string") {
+              serverMessage = body.error;
+            }
+          }
+        } catch {
+          /* fall through to error.message */
+        }
+        throw new Error(serverMessage ?? error.message);
       }
 
-      // 2. Send invitation email via edge function
-      const { data: emailResult, error: emailError } =
-        await supabase.functions.invoke("send-email", {
-          body: {
-            to: data.email.toLowerCase().trim(),
-            type: "invite",
-            data: { coachName: profile?.full_name || "Il tuo Coach" },
-          },
-        });
-
-      if (emailError) {
-        console.warn("Email send failed, but invite was created:", emailError);
+      if (result && typeof result === "object" && "error" in result) {
+        throw new Error(String((result as { error: unknown }).error));
       }
 
       toast({
-        title: "Invito inviato!",
-        description: `Email di invito inviata a ${data.email}.`,
+        title: "Invito inviato con successo",
+        description: `Email di invito inviata a ${athleteEmail}.`,
       });
 
       form.reset();
@@ -105,19 +151,23 @@ export function InviteAthleteDialog({
       onAthleteInvited?.();
     } catch (error: unknown) {
       console.error("Error inviting athlete:", error);
-      const description = error instanceof Error ? error.message : "Impossibile invitare l'atleta. Riprova.";
       toast({
         variant: "destructive",
         title: "Errore",
-        description,
+        description: describeInviteError(error),
       });
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const handleOpenChange = (next: boolean) => {
+    if (isSubmitting && !next) return;
+    setOpen(next);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         {trigger || (
           <Button className="gradient-primary">
@@ -149,7 +199,13 @@ export function InviteAthleteDialog({
                 <FormItem>
                   <FormLabel>Nome</FormLabel>
                   <FormControl>
-                    <Input placeholder="Mario" {...field} />
+                    <Input
+                      placeholder="Mario"
+                      autoComplete="given-name"
+                      maxLength={60}
+                      disabled={isSubmitting}
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -162,7 +218,13 @@ export function InviteAthleteDialog({
                 <FormItem>
                   <FormLabel>Cognome</FormLabel>
                   <FormControl>
-                    <Input placeholder="Rossi" {...field} />
+                    <Input
+                      placeholder="Rossi"
+                      autoComplete="family-name"
+                      maxLength={60}
+                      disabled={isSubmitting}
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -178,6 +240,8 @@ export function InviteAthleteDialog({
                     <Input
                       type="email"
                       placeholder="mario.rossi@email.com"
+                      autoComplete="email"
+                      disabled={isSubmitting}
                       {...field}
                     />
                   </FormControl>
