@@ -128,20 +128,30 @@ serve(async (req) => {
       { auth: { autoRefreshToken: false, persistSession: false } },
     );
 
-    const { data: inviteData, error: inviteError } =
-      await supabaseAdmin.auth.admin.inviteUserByEmail(athleteEmail, {
-        data: {
-          coach_id: coachId,
-          full_name: fullName,
-          first_name: firstName,
-          last_name: lastName,
-          role: "athlete",
-          invited_by: coachId,
-        },
+    const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+    if (!RESEND_API_KEY) {
+      return json({ error: "Email service not configured" }, 500);
+    }
+
+    const userMetadata = {
+      coach_id: coachId,
+      full_name: fullName,
+      first_name: firstName,
+      last_name: lastName,
+      role: "athlete",
+      invited_by: coachId,
+    };
+
+    // Generate the invite link WITHOUT triggering Supabase's rate-limited mailer.
+    const { data: linkData, error: linkError } =
+      await supabaseAdmin.auth.admin.generateLink({
+        type: "invite",
+        email: athleteEmail,
+        options: { data: userMetadata },
       });
 
-    if (inviteError) {
-      const message = inviteError.message ?? "Failed to send invite";
+    if (linkError) {
+      const message = linkError.message ?? "Failed to generate invite link";
       const lower = message.toLowerCase();
 
       if (
@@ -159,18 +169,61 @@ serve(async (req) => {
         );
       }
 
-      if (lower.includes("rate limit") || lower.includes("too many")) {
-        return json({ error: message, code: "rate_limited" }, 429);
-      }
-
-      console.error("invite-athlete: inviteUserByEmail failed", inviteError);
+      console.error("invite-athlete: generateLink failed", linkError);
       return json({ error: message }, 500);
+    }
+
+    const actionLink = linkData?.properties?.action_link;
+    if (!actionLink) {
+      return json({ error: "No invite link generated" }, 500);
+    }
+
+    // Send via Resend directly — no Supabase mailer rate limit.
+    const subject = `${fullName ? firstName + ", " : ""}sei stato invitato dal tuo coach`;
+    const html = `
+      <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;color:#0f172a;background:#ffffff;">
+        <h1 style="font-size:22px;margin:0 0 16px;">Ciao ${firstName || ""},</h1>
+        <p style="font-size:15px;line-height:1.6;color:#334155;margin:0 0 24px;">
+          Il tuo coach ti ha invitato a unirti alla piattaforma di allenamento. Clicca sul pulsante qui sotto per attivare il tuo account.
+        </p>
+        <p style="margin:0 0 32px;">
+          <a href="${actionLink}" style="display:inline-block;background:#7c3aed;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;font-size:15px;">
+            Accetta invito
+          </a>
+        </p>
+        <p style="font-size:13px;color:#64748b;line-height:1.6;margin:0 0 8px;">
+          Oppure copia e incolla questo link nel browser:
+        </p>
+        <p style="font-size:12px;color:#64748b;word-break:break-all;margin:0;">${actionLink}</p>
+      </div>
+    `;
+
+    const resendResp = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${RESEND_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: "Coach <onboarding@resend.dev>",
+        to: [athleteEmail],
+        subject,
+        html,
+      }),
+    });
+
+    if (!resendResp.ok) {
+      const errBody = await resendResp.text();
+      console.error("invite-athlete: Resend send failed", resendResp.status, errBody);
+      return json(
+        { error: "Failed to send invite email", details: errBody },
+        502,
+      );
     }
 
     return json(
       {
         success: true,
-        userId: inviteData?.user?.id ?? null,
         email: athleteEmail,
         fullName,
       },
