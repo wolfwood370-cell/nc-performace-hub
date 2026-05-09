@@ -63,6 +63,7 @@ const ExerciseExecution = lazy(() => import("./pages/athlete/ExerciseExecution")
 const ExerciseDetail = lazy(() => import("./pages/athlete/ExerciseDetail"));
 const ExercisePreview = lazy(() => import("./pages/athlete/ExercisePreview"));
 const WorkoutPhaseDetail = lazy(() => import("./pages/athlete/WorkoutPhaseDetail"));
+const AthleteProfile = lazy(() => import("./pages/athlete/AthleteProfile"));
 import { AthleteLayout } from "./components/athlete/AthleteLayout";
 const OnboardingWizard = lazy(() => import("./pages/onboarding/OnboardingWizard"));
 const NutritionWizardStep1 = lazy(() => import("./pages/athlete/onboarding/NutritionWizardStep1"));
