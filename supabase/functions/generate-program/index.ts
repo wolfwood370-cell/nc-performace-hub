@@ -13,15 +13,12 @@ serve(async (req) => {
   }
 
   try {
-    const { athlete_id, focus_goal, days_per_week, equipment, mode } = await req.json();
-
-    if (!athlete_id || !focus_goal || !days_per_week || !mode) {
-      return new Response(JSON.stringify({ error: "Parametri mancanti" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
+    // -------------------------------------------------------------------------
+    // SECURITY GATE — must run before any expensive work (DB reads, LOVABLE_API
+    // calls). Order: header → JWT → role → ownership. Each step is a hard 401/403
+    // because `verify_jwt = false` at the gateway means this code is the only
+    // line of defense for paid AI invocations.
+    // -------------------------------------------------------------------------
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "Non autenticato" }), {
@@ -30,22 +27,117 @@ serve(async (req) => {
       });
     }
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-    const userClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
+    if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceKey) {
+      console.error("[generate-program] Missing Supabase env vars");
+      return new Response(JSON.stringify({ error: "Configurazione server mancante" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // User-scoped client → validates the JWT and resolves auth.uid() for RPCs.
+    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     });
-    const { data: { user } } = await userClient.auth.getUser();
-    if (!user) {
+
+    const { data: userData, error: authError } = await userClient.auth.getUser();
+    const user = userData?.user;
+    if (authError || !user) {
       return new Response(JSON.stringify({ error: "Non autenticato" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Fetch athlete profile
+    // Strict role gate: caller MUST be a coach. We read role via the
+    // user-scoped client so RLS still applies (defense in depth — if the
+    // caller could somehow read their own profile but not be a coach,
+    // this still rejects them).
+    const { data: callerProfile, error: callerProfileError } = await userClient
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    if (callerProfileError || !callerProfile) {
+      console.error("[generate-program] Caller profile lookup failed", callerProfileError);
+      return new Response(JSON.stringify({ error: "Impossibile verificare il ruolo del chiamante" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (callerProfile.role !== "coach") {
+      return new Response(JSON.stringify({ error: "Solo i coach possono generare programmi" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Now safe to parse the body.
+    let body: {
+      athlete_id?: unknown;
+      focus_goal?: unknown;
+      days_per_week?: unknown;
+      equipment?: unknown;
+      mode?: unknown;
+    };
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(JSON.stringify({ error: "JSON non valido" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const athlete_id = typeof body.athlete_id === "string" ? body.athlete_id : null;
+    const focus_goal = typeof body.focus_goal === "string" ? body.focus_goal : null;
+    const days_per_week = typeof body.days_per_week === "number" ? body.days_per_week : null;
+    const equipment = typeof body.equipment === "string" ? body.equipment : null;
+    const mode = body.mode === "new" || body.mode === "continue" ? body.mode : null;
+
+    if (!athlete_id || !focus_goal || !days_per_week || !mode) {
+      return new Response(JSON.stringify({ error: "Parametri mancanti" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Ownership gate: confirm the target athlete is in the caller's roster
+    // via the SECURITY DEFINER helper (avoids RLS recursion and is the same
+    // function used by every other coach RLS policy).
+    const { data: ownsAthlete, error: ownsError } = await userClient.rpc(
+      "is_coach_of_athlete",
+      { p_athlete_id: athlete_id },
+    );
+
+    if (ownsError) {
+      console.error("[generate-program] is_coach_of_athlete failed", ownsError);
+      return new Response(JSON.stringify({ error: "Impossibile verificare la relazione coach-atleta" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (ownsAthlete !== true) {
+      return new Response(JSON.stringify({ error: "Accesso negato: atleta non in roster" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Service client for the data fetches that follow. Authorization has now
+    // been fully established above — service-role reads from here on are
+    // intentional (we need fields like onboarding_data that the caller's RLS
+    // already permits via the coach relationship).
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Fetch athlete profile.
     const { data: profile } = await supabase
       .from("profiles")
       .select("coach_id, full_name, onboarding_data, one_rm_data")
