@@ -50,6 +50,10 @@ const WeeklyCheckin = lazy(() => import("./pages/athlete/WeeklyCheckin"));
 const WorkoutPhaseDetail = lazy(() => import("./pages/athlete/WorkoutPhaseDetail"));
 const ExercisePreview = lazy(() => import("./pages/athlete/ExercisePreview"));
 const ActiveWorkout = lazy(() => import("./pages/athlete/ActiveWorkout"));
+const PostWorkoutDebrief = lazy(() => import("./pages/athlete/PostWorkoutDebrief"));
+const TrainingAnalytics = lazy(() => import("./pages/athlete/TrainingAnalytics"));
+const AcwrAnalysis = lazy(() => import("./pages/athlete/AcwrAnalysis"));
+const DailyReadiness = lazy(() => import("./pages/athlete/DailyReadiness"));
 
 const App = () => (
   <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} forcedTheme="light">
@@ -168,6 +172,43 @@ const App = () => (
                 element={
                   <ProtectedAthleteRoute>
                     <ActiveWorkout />
+                  </ProtectedAthleteRoute>
+                }
+              />
+
+              {/* Phase 9 — Post-workout debrief + deep analytics surfaces.
+                  All stack-pushed detail flows; siblings of the layout
+                  so they own their own headers / CTAs without the
+                  global BottomNavBar competing. */}
+              <Route
+                path="/athlete/debrief"
+                element={
+                  <ProtectedAthleteRoute>
+                    <PostWorkoutDebrief />
+                  </ProtectedAthleteRoute>
+                }
+              />
+              <Route
+                path="/athlete/analytics"
+                element={
+                  <ProtectedAthleteRoute>
+                    <TrainingAnalytics />
+                  </ProtectedAthleteRoute>
+                }
+              />
+              <Route
+                path="/athlete/analytics/acwr"
+                element={
+                  <ProtectedAthleteRoute>
+                    <AcwrAnalysis />
+                  </ProtectedAthleteRoute>
+                }
+              />
+              <Route
+                path="/athlete/readiness/today"
+                element={
+                  <ProtectedAthleteRoute>
+                    <DailyReadiness />
                   </ProtectedAthleteRoute>
                 }
               />
