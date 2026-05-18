@@ -52,6 +52,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useAthleteWorkoutStore } from "@/stores/useAthleteWorkoutStore";
 import { useAthleteReadinessStore } from "@/stores/useAthleteReadinessStore";
+import { useDailyReadinessQuery } from "@/hooks/athlete/useAthleteReadinessHooks";
 import type {
   ExerciseType,
   PreviewExercise,
@@ -492,10 +493,10 @@ function HeroWorkoutCard() {
 // =============================================================================
 function GlanceCards() {
   const navigate = useNavigate();
-  const isReadinessCompletedToday = useAthleteReadinessStore(
-    (s) => s.isCompletedToday,
-  );
-  const dailyScore = useAthleteReadinessStore((s) => s.dailyScore);
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const readinessToday = useDailyReadinessQuery(todayIso);
+  const isReadinessCompletedToday = Boolean(readinessToday.data);
+  const dailyScore = readinessToday.data?.score ?? null;
 
   // Display values for the Prontezza card. Falls back to the static
   // READINESS mock until the day's check-in is submitted, so the card
@@ -858,7 +859,7 @@ export default function AthleteTraining() {
    *  Stamps a fresh session in the store and jumps to the full-screen
    *  active workout overlay. */
   const handleStart = () => {
-    startSession();
+    startSession(crypto.randomUUID());
     navigate("/athlete/active-workout");
   };
 
