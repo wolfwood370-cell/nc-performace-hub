@@ -112,12 +112,12 @@ export function InviteAthleteDialog({
       const token = crypto.randomUUID();
 
       const { error } = await supabase
-        .from("athlete_onboarding_links")
+        .from("invite_tokens")
         .insert({
           coach_id: user.id,
           email: athleteEmail,
           full_name: fullName,
-          unique_token: token,
+          token,
         });
 
       if (error) {
