@@ -154,12 +154,54 @@ serve(async (req) => {
       const message = linkError.message ?? "Failed to generate invite link";
       const lower = message.toLowerCase();
 
-      if (
+      const isAlreadyExists =
         lower.includes("already been registered") ||
         lower.includes("already registered") ||
         lower.includes("user already exists") ||
-        lower.includes("email address has already")
-      ) {
+        lower.includes("email address has already");
+
+      if (isAlreadyExists) {
+        // Idempotent path: find the existing user and attach to this coach
+        // if they are an unassigned athlete.
+        const { data: list, error: listErr } =
+          await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 200 });
+
+        const existing = list?.users?.find(
+          (u) => u.email?.toLowerCase() === athleteEmail,
+        );
+
+        if (!listErr && existing) {
+          const { data: existingProfile } = await supabaseAdmin
+            .from("profiles")
+            .select("id, role, coach_id, full_name")
+            .eq("id", existing.id)
+            .maybeSingle();
+
+          if (!existingProfile) {
+            // Auth user without profile → create one linked to this coach
+            await supabaseAdmin.from("profiles").insert({
+              id: existing.id,
+              full_name: fullName,
+              role: "athlete",
+              coach_id: coachId,
+              onboarding_completed: false,
+            });
+            return json({ success: true, email: athleteEmail, attached: true }, 200);
+          }
+
+          if (existingProfile.role === "athlete" && !existingProfile.coach_id) {
+            await supabaseAdmin
+              .from("profiles")
+              .update({ coach_id: coachId, full_name: existingProfile.full_name ?? fullName })
+              .eq("id", existing.id);
+            return json({ success: true, email: athleteEmail, attached: true }, 200);
+          }
+
+          if (existingProfile.role === "athlete" && existingProfile.coach_id === coachId) {
+            return json({ success: true, email: athleteEmail, alreadyLinked: true }, 200);
+          }
+        }
+
         return json(
           {
             error: "An account with this email already exists",
