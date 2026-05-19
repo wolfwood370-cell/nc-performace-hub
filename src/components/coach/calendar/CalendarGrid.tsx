@@ -513,7 +513,7 @@ export function CalendarGrid({
           </div>
 
           {/* View Toggle */}
-          <Tabs value={view} onValueChange={(v) => onViewChange(v as any)}>
+          <Tabs value={view} onValueChange={(v) => onViewChange(v as "month" | "week")}>
             <TabsList className="h-9">
               <TabsTrigger value="month" className="text-xs px-4">
                 Mese

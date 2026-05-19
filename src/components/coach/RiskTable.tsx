@@ -181,7 +181,7 @@ function useRiskTableData() {
   });
 
   const athletes: RiskTableAthlete[] = useMemo(() => {
-    return rows.map((row: any) => {
+    return rows.map((row) => {
       const acwr = row.current_acwr != null ? Number(row.current_acwr) : null;
       const hasInjury = row.has_active_injury === true;
       const isOnboarding = !row.onboarding_completed;

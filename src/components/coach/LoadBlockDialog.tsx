@@ -24,6 +24,7 @@ import { Download, Layers, Loader2, Search, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { TablesUpdate } from "@/integrations/supabase/types";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
@@ -95,10 +96,10 @@ export function LoadBlockDialog({
   // Delete template mutation
   const deleteMutation = useMutation({
     mutationFn: async (templateId: string) => {
-      const { error } = await supabase
-        .from("program_plans")
-        .update({ deleted_at: new Date().toISOString() } as any)
-        .eq("id", templateId);
+      const payload: TablesUpdate<"program_plans"> = {
+        deleted_at: new Date().toISOString(),
+      };
+      const { error } = await supabase.from("program_plans").update(payload).eq("id", templateId);
 
       if (error) throw error;
     },

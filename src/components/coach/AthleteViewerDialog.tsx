@@ -327,12 +327,21 @@ export function AthleteViewerDialog({
 
       const logMap = new Map(logs?.map((l) => [l.athlete_habit_id, l.completed]) || []);
 
-      return athleteHabits.map((h) => ({
-        id: h.id,
-        name: (h.habits_library as any)?.name || "Abitudine",
-        category: (h.habits_library as any)?.category || "general",
-        completed: logMap.get(h.id) ?? false,
-      }));
+      return athleteHabits.map((h) => {
+        // Supabase types the joined relation loosely (can be object/array/null
+        // depending on FK shape). Narrow to the two fields we actually read
+        // — `name` and `category` — instead of casting through `any`.
+        const lib = h.habits_library as
+          | { name?: string | null; category?: string | null }
+          | null
+          | undefined;
+        return {
+          id: h.id,
+          name: lib?.name || "Abitudine",
+          category: lib?.category || "general",
+          completed: logMap.get(h.id) ?? false,
+        };
+      });
     },
     enabled: open && !!athleteId,
   });

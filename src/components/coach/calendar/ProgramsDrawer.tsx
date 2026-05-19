@@ -326,7 +326,7 @@ export function ProgramsDrawer() {
         </div>
 
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "programs" | "templates")}>
           <TabsList className="w-full h-9">
             <TabsTrigger value="programs" className="flex-1 text-xs gap-1.5">
               <Layout className="h-3.5 w-3.5" />

@@ -55,13 +55,13 @@ Sessione di cleanup eseguita sul branch `claude/flamboyant-hertz-937c2d`. Lo sta
 
 ### Tabella riassuntiva post-sessione
 
-| Severità        | Chiusi ✅                                                    | Parziali 🟡                                                              | Pendenti ❌ |
-| --------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------ | ----------- |
-| 🔴 Critical (4) | **C1, C2, C4**                                               | —                                                                        | C3          |
-| 🟡 Medium (13)  | **M1, M2, M4, M6, M7, M9, M10, M12** (de-facto chiuso da C2) | M3 (1/6 zone), M5 (14/16), M8 (2/5), M11 (3 spot), M13 (95% già coperto) | —           |
-| 🔵 Low (9)      | **B2, B3, B4, B5, B6, B7, B8**                               | —                                                                        | B1, B9      |
+| Severità        | Chiusi ✅                                                        | Parziali 🟡                                                  | Pendenti ❌ |
+| --------------- | ---------------------------------------------------------------- | ------------------------------------------------------------ | ----------- |
+| 🔴 Critical (4) | **C1, C2, C4**                                                   | —                                                            | C3          |
+| 🟡 Medium (13)  | **M1, M2, M4, M5, M6, M7, M9, M10, M12** (de-facto chiuso da C2) | M3 (1/6 zone), M8 (2/5), M11 (3 spot), M13 (95% già coperto) | —           |
+| 🔵 Low (9)      | **B2, B3, B4, B5, B6, B7, B8**                                   | —                                                            | B1, B9      |
 
-**Totale**: **18/26 finding completamente chiusi (69%)**, 5 parziali, 3 pendenti.
+**Totale**: **19/26 finding completamente chiusi (73%)**, 4 parziali, 3 pendenti.
 
 ### Mappa commit → finding
 
@@ -105,15 +105,14 @@ Sessione di cleanup eseguita sul branch `claude/flamboyant-hertz-937c2d`. Lo sta
 
 ### Cosa rimane di sostanziale
 
-| Item                       | Stato               | Effort                | Note                                                                                                                                                                                                           |
-| -------------------------- | ------------------- | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **C3**                     | ❌ pendente         | ~1 settimana, 6+ PR   | Estrazione tab-by-tab di `AthleteDetail.tsx` (4037 righe → 6 sotto-file). Il file ha resistito a 4 modifiche significative (C4, M1, C2, M7) senza instabilità — segno positivo per il refactor.                |
-| **M3** zone rimanenti      | 🟡 parziale (1/6)   | 1-2 giorni l'una      | MOCK_GOOGLE_BUSY_SLOTS (Google Calendar API), MOCK_APPOINTMENTS (tabella `appointments`), MOCK_BLOCKS (tabella `training_blocks`), Stripe placeholder (integrazione esterna), BarPathGallery (video pipeline). |
-| **M5** residui             | 🟡 parziale (14/16) | 30 min                | 2 `any` residui in spot leaf (recharts custom tooltip).                                                                                                                                                        |
-| **M8** residui             | 🟡 parziale (2/5)   | 1-2 ore               | 3 `as unknown as` documentati come bridge `Json` inevitabile; chiudibili solo aggiungendo `[key: string]: unknown` alle interface o usando zod.                                                                |
-| **M11** touch-area globale | 🟡 parziale         | 2-4 ore               | Aria-label aggiunti dove serviva; resta da fare un audit sistematico dei `size="icon"` con `Button` shadcn.                                                                                                    |
-| **B1**                     | ❌ pendente         | Decisione di prodotto | PDF extraction in KnowledgeBase: pdfjs lato client o edge function.                                                                                                                                            |
-| **B9**                     | ❌ pendente         | ~1 giorno             | Skeleton loader pattern uniforme per i widget dashboard coach.                                                                                                                                                 |
+| Item                       | Stato             | Effort                | Note                                                                                                                                                                                                           |
+| -------------------------- | ----------------- | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **C3**                     | ❌ pendente       | ~1 settimana, 6+ PR   | Estrazione tab-by-tab di `AthleteDetail.tsx` (4037 righe → 6 sotto-file). Il file ha resistito a 4 modifiche significative (C4, M1, C2, M7) senza instabilità — segno positivo per il refactor.                |
+| **M3** zone rimanenti      | 🟡 parziale (1/6) | 1-2 giorni l'una      | MOCK_GOOGLE_BUSY_SLOTS (Google Calendar API), MOCK_APPOINTMENTS (tabella `appointments`), MOCK_BLOCKS (tabella `training_blocks`), Stripe placeholder (integrazione esterna), BarPathGallery (video pipeline). |
+| **M8** residui             | 🟡 parziale (2/5) | 1-2 ore               | 3 `as unknown as` documentati come bridge `Json` inevitabile; chiudibili solo aggiungendo `[key: string]: unknown` alle interface o usando zod.                                                                |
+| **M11** touch-area globale | 🟡 parziale       | 2-4 ore               | Aria-label aggiunti dove serviva; resta da fare un audit sistematico dei `size="icon"` con `Button` shadcn.                                                                                                    |
+| **B1**                     | ❌ pendente       | Decisione di prodotto | PDF extraction in KnowledgeBase: pdfjs lato client o edge function.                                                                                                                                            |
+| **B9**                     | ❌ pendente       | ~1 giorno             | Skeleton loader pattern uniforme per i widget dashboard coach.                                                                                                                                                 |
 
 ---
 
@@ -199,7 +198,7 @@ Sessione di cleanup eseguita sul branch `claude/flamboyant-hertz-937c2d`. Lo sta
 - **Impatto**: il cast bypassa la type-check. Se `workouts.deleted_at` viene rimosso o rinominato in DB, il TS non se ne accorge. Bug silente al primo refactor schema.
 - **Fix**: rimuovere `as any`. Il payload `{ deleted_at: string }` è già compatibile con `TablesUpdate<"workouts">`. Se il TS si lamenta, è perché la colonna non è in types.ts — segno che la migrazione del soft-delete non è applicata o `npx supabase gen types` non è stato rieseguito.
 
-### M5. 🟡 16 ulteriori `any` cast in 8 file diversi _(parziale: 14/16 chiusi in `4d16d7b` + `5785914`)_
+### M5. ✅ 16 ulteriori `any` cast in 8 file diversi _(chiuso — residui finali sistemati: Tabs value cast → union esplicito, LoadBlockDialog soft-delete → `TablesUpdate<"program_plans">`, RiskTable map row inferito, AthleteViewerDialog habits_library → narrow type)_
 
 - **Dove**:
   - [`CoachCalendar.tsx:203`](src/pages/coach/CoachCalendar.tsx) — `(log: any) => ({...})` in map
