@@ -66,11 +66,18 @@ export function useCoachNutritionAnalytics(athleteId: string | undefined) {
 
       const targetCalories = planRes.data?.daily_calories ?? null;
 
+      // Local row types for the two SELECT projections above. Supabase
+      // generic typing returns broader shapes; naming them avoids `any`.
+      type DailySumRow = { date: string; total_calories: number | null };
+      type WeightRow = { date: string; weight_kg: number | null };
+
       const sumMap = new Map<string, number>();
-      (sumRes.data ?? []).forEach((r: any) => sumMap.set(r.date, Number(r.total_calories)));
+      ((sumRes.data ?? []) as DailySumRow[]).forEach((r) =>
+        sumMap.set(r.date, Number(r.total_calories)),
+      );
 
       const weightMap = new Map<string, number>();
-      (weightRes.data ?? []).forEach((r: any) => {
+      ((weightRes.data ?? []) as WeightRow[]).forEach((r) => {
         if (r.weight_kg != null) weightMap.set(r.date, Number(r.weight_kg));
       });
 
@@ -108,7 +115,7 @@ export function useCoachNutritionAnalytics(athleteId: string | undefined) {
       }
 
       // Weight change: last - first measured
-      const measured = (weightRes.data ?? []).filter((r: any) => r.weight_kg != null);
+      const measured = ((weightRes.data ?? []) as WeightRow[]).filter((r) => r.weight_kg != null);
       let weightChange: number | null = null;
       if (measured.length >= 2) {
         const first = Number(measured[0].weight_kg);

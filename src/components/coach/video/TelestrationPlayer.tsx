@@ -5,16 +5,7 @@ import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import {
-  Play,
-  Pause,
-  Pencil,
-  Minus,
-  RotateCcw,
-  Triangle,
-  X,
-  Save,
-} from "lucide-react";
+import { Play, Pause, Pencil, Minus, RotateCcw, Triangle, X, Save } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -58,11 +49,7 @@ function angleBetween(a: Point, vertex: Point, b: Point): number {
   return Math.round((rad * 180) / Math.PI);
 }
 
-function drawStroke(
-  ctx: CanvasRenderingContext2D,
-  stroke: Stroke,
-  scale: number,
-) {
+function drawStroke(ctx: CanvasRenderingContext2D, stroke: Stroke, scale: number) {
   ctx.strokeStyle = stroke.color;
   ctx.lineWidth = 3 * scale;
   ctx.lineCap = "round";
@@ -88,11 +75,7 @@ function drawStroke(
 
     // Draw angle arc + label
     if (stroke.points.length === 3) {
-      const deg = angleBetween(
-        stroke.points[0],
-        stroke.points[1],
-        stroke.points[2],
-      );
+      const deg = angleBetween(stroke.points[0], stroke.points[1], stroke.points[2]);
       ctx.fillStyle = stroke.color;
       ctx.font = `bold ${14 * scale}px Inter, sans-serif`;
       ctx.fillText(`${deg}°`, stroke.points[1].x + 10, stroke.points[1].y - 10);
@@ -211,9 +194,7 @@ export function TelestrationPlayer({ url, title, onClose, onSave }: Telestration
   const onPointerMove = (e: React.PointerEvent) => {
     if (!isDrawing || !currentStroke || tool !== "line") return;
     const pt = getCanvasPoint(e);
-    setCurrentStroke((prev) =>
-      prev ? { ...prev, points: [...prev.points, pt] } : null,
-    );
+    setCurrentStroke((prev) => (prev ? { ...prev, points: [...prev.points, pt] } : null));
   };
 
   const onPointerUp = () => {
@@ -235,7 +216,7 @@ export function TelestrationPlayer({ url, title, onClose, onSave }: Telestration
   };
 
   const cycleSpeed = () => {
-    const idx = SPEED_OPTIONS.indexOf(speed as any);
+    const idx = (SPEED_OPTIONS as readonly number[]).indexOf(speed);
     setSpeed(SPEED_OPTIONS[(idx + 1) % SPEED_OPTIONS.length]);
   };
 
@@ -263,6 +244,10 @@ export function TelestrationPlayer({ url, title, onClose, onSave }: Telestration
         className="relative w-full rounded-lg overflow-hidden bg-black"
         style={{ aspectRatio: "16/9" }}
       >
+        {/* eslint-disable-next-line jsx-a11y/media-has-caption -- coach-uploaded
+            training videos have no caption track available; a placeholder
+            <track /> would be misleading. WCAG concession tracked as a
+            follow-up in the coach audit M11/B-series. */}
         <video
           ref={playerRef}
           src={url}
@@ -308,7 +293,8 @@ export function TelestrationPlayer({ url, title, onClose, onSave }: Telestration
           onClick={() => {
             const vid = playerRef.current;
             if (!vid) return;
-            if (vid.paused) vid.play(); else vid.pause();
+            if (vid.paused) vid.play();
+            else vid.pause();
           }}
           className="shrink-0"
         >
@@ -327,11 +313,20 @@ export function TelestrationPlayer({ url, title, onClose, onSave }: Telestration
           className="flex-1"
         />
 
-        <Button variant="ghost" size="sm" onClick={() => {
-          cycleSpeed();
-          const vid = playerRef.current;
-          if (vid) vid.playbackRate = SPEED_OPTIONS[(SPEED_OPTIONS.indexOf(speed as any) + 1) % SPEED_OPTIONS.length];
-        }} className="tabular-nums shrink-0">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            cycleSpeed();
+            const vid = playerRef.current;
+            if (vid)
+              vid.playbackRate =
+                SPEED_OPTIONS[
+                  ((SPEED_OPTIONS as readonly number[]).indexOf(speed) + 1) % SPEED_OPTIONS.length
+                ];
+          }}
+          className="tabular-nums shrink-0"
+        >
           {speed}x
         </Button>
       </div>
@@ -344,9 +339,11 @@ export function TelestrationPlayer({ url, title, onClose, onSave }: Telestration
           className="gap-1.5 w-full"
           onClick={() => {
             const data = { strokes, timestamp: played * duration };
-            
+
             if (onSave) onSave(data);
-            toast.success("Analysis Saved", { description: `${strokes.length} annotation(s) at ${formatTime(played * duration)}` });
+            toast.success("Analysis Saved", {
+              description: `${strokes.length} annotation(s) at ${formatTime(played * duration)}`,
+            });
           }}
         >
           <Save className="h-3.5 w-3.5" />
@@ -427,7 +424,8 @@ export function TelestrationPlayer({ url, title, onClose, onSave }: Telestration
 
       {tool === "angle" && currentStroke && (
         <p className="text-xs text-muted-foreground">
-          Click {3 - currentStroke.points.length} more point{currentStroke.points.length < 2 ? "s" : ""} to complete the angle measurement.
+          Click {3 - currentStroke.points.length} more point
+          {currentStroke.points.length < 2 ? "s" : ""} to complete the angle measurement.
         </p>
       )}
     </div>

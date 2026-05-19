@@ -20,9 +20,18 @@ import {
   Dumbbell,
   Target,
   Flame,
+  type LucideIcon,
 } from "lucide-react";
 
-function MetricPill({ icon: Icon, label, value }: { icon: any; label: string; value: string | number }) {
+function MetricPill({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: string | number;
+}) {
   return (
     <div className="flex items-center gap-1.5 rounded-full bg-muted/50 px-3 py-1 text-xs">
       <Icon className="h-3 w-3 text-muted-foreground" />
@@ -45,24 +54,35 @@ function CheckinCard({
   onUpdate: (id: string, text: string) => void;
   isSending: boolean;
 }) {
-  const [editedText, setEditedText] = useState(
-    checkin.coach_notes || checkin.ai_summary || ""
-  );
+  const [editedText, setEditedText] = useState(checkin.coach_notes || checkin.ai_summary || "");
   const [isEditing, setIsEditing] = useState(false);
 
   const metrics = checkin.metrics_snapshot;
-  const initials = checkin.athlete?.full_name
-    ?.split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2) || "??";
+  const initials =
+    checkin.athlete?.full_name
+      ?.split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2) || "??";
 
   const statusConfig = {
-    pending: { label: "In Attesa", icon: Clock, color: "bg-amber-500/10 text-amber-600 border-amber-500/20" },
-    approved: { label: "Approvato", icon: CheckCircle2, color: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" },
+    pending: {
+      label: "In Attesa",
+      icon: Clock,
+      color: "bg-amber-500/10 text-amber-600 border-amber-500/20",
+    },
+    approved: {
+      label: "Approvato",
+      icon: CheckCircle2,
+      color: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
+    },
     sent: { label: "Inviato", icon: Send, color: "bg-primary/10 text-primary border-primary/20" },
-    skipped: { label: "Scartato", icon: SkipForward, color: "bg-muted text-muted-foreground border-border" },
+    skipped: {
+      label: "Scartato",
+      icon: SkipForward,
+      color: "bg-muted text-muted-foreground border-border",
+    },
   };
 
   const status = statusConfig[checkin.status];
@@ -83,7 +103,11 @@ function CheckinCard({
                 {checkin.athlete?.full_name || "Atleta"}
               </h3>
               <p className="text-xs text-muted-foreground">
-                Settimana del {new Date(checkin.week_start).toLocaleDateString("it-IT", { day: "numeric", month: "short" })}
+                Settimana del{" "}
+                {new Date(checkin.week_start).toLocaleDateString("it-IT", {
+                  day: "numeric",
+                  month: "short",
+                })}
               </p>
             </div>
           </div>
@@ -186,13 +210,8 @@ function CheckinCard({
 }
 
 export default function CoachCheckinInbox() {
-  const {
-    checkins,
-    isLoading,
-    generateCheckins,
-    updateCheckin,
-    approveAndSend,
-  } = useWeeklyCheckins();
+  const { checkins, isLoading, generateCheckins, updateCheckin, approveAndSend } =
+    useWeeklyCheckins();
 
   const pendingCheckins = checkins.filter((c) => c.status === "pending");
   const sentCheckins = checkins.filter((c) => c.status === "sent");
@@ -212,135 +231,134 @@ export default function CoachCheckinInbox() {
 
   return (
     <>
-    <MetaHead title="Inbox Check-in" description="Revisione settimanale degli atleti." />
-    <CoachLayout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">
-              Revisione Settimanale
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Rivedi e invia i report AI ai tuoi atleti
-            </p>
-          </div>
-          <Button
-            onClick={() => generateCheckins.mutate()}
-            disabled={generateCheckins.isPending}
-            className="gap-2"
-          >
-            {generateCheckins.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Zap className="h-4 w-4" />
-            )}
-            Analizza Tutti
-          </Button>
-        </div>
-
-        {/* Tabs */}
-        <Tabs defaultValue="pending">
-          <TabsList>
-            <TabsTrigger value="pending" className="gap-1.5">
-              <Clock className="h-3.5 w-3.5" />
-              In Attesa
-              {pendingCheckins.length > 0 && (
-                <Badge variant="secondary" className="ml-1 h-5 min-w-5 text-xs">
-                  {pendingCheckins.length}
-                </Badge>
+      <MetaHead title="Inbox Check-in" description="Revisione settimanale degli atleti." />
+      <CoachLayout>
+        <div className="space-y-6">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">Revisione Settimanale</h1>
+              <p className="text-sm text-muted-foreground mt-1">
+                Rivedi e invia i report AI ai tuoi atleti
+              </p>
+            </div>
+            <Button
+              onClick={() => generateCheckins.mutate()}
+              disabled={generateCheckins.isPending}
+              className="gap-2"
+            >
+              {generateCheckins.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Zap className="h-4 w-4" />
               )}
-            </TabsTrigger>
-            <TabsTrigger value="sent" className="gap-1.5">
-              <Send className="h-3.5 w-3.5" />
-              Inviati
-            </TabsTrigger>
-            <TabsTrigger value="skipped" className="gap-1.5">
-              <SkipForward className="h-3.5 w-3.5" />
-              Scartati
-            </TabsTrigger>
-          </TabsList>
+              Analizza Tutti
+            </Button>
+          </div>
 
-          <TabsContent value="pending" className="mt-4">
-            {isLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
-            ) : pendingCheckins.length === 0 ? (
-              <Card className="py-12">
-                <CardContent className="text-center space-y-3">
-                  <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mx-auto">
-                    <Zap className="h-6 w-6 text-muted-foreground" />
-                  </div>
-                  <p className="text-muted-foreground">
-                    Nessun report in attesa. Clicca "Analizza Tutti" per generare i report settimanali.
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {pendingCheckins.map((checkin) => (
-                  <CheckinCard
-                    key={checkin.id}
-                    checkin={checkin}
-                    onApprove={handleApprove}
-                    onSkip={handleSkip}
-                    onUpdate={handleUpdateText}
-                    isSending={approveAndSend.isPending}
-                  />
-                ))}
-              </div>
-            )}
-          </TabsContent>
+          {/* Tabs */}
+          <Tabs defaultValue="pending">
+            <TabsList>
+              <TabsTrigger value="pending" className="gap-1.5">
+                <Clock className="h-3.5 w-3.5" />
+                In Attesa
+                {pendingCheckins.length > 0 && (
+                  <Badge variant="secondary" className="ml-1 h-5 min-w-5 text-xs">
+                    {pendingCheckins.length}
+                  </Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="sent" className="gap-1.5">
+                <Send className="h-3.5 w-3.5" />
+                Inviati
+              </TabsTrigger>
+              <TabsTrigger value="skipped" className="gap-1.5">
+                <SkipForward className="h-3.5 w-3.5" />
+                Scartati
+              </TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="sent" className="mt-4">
-            {sentCheckins.length === 0 ? (
-              <Card className="py-12">
-                <CardContent className="text-center">
-                  <p className="text-muted-foreground">Nessun report inviato.</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {sentCheckins.map((checkin) => (
-                  <CheckinCard
-                    key={checkin.id}
-                    checkin={checkin}
-                    onApprove={handleApprove}
-                    onSkip={handleSkip}
-                    onUpdate={handleUpdateText}
-                    isSending={false}
-                  />
-                ))}
-              </div>
-            )}
-          </TabsContent>
+            <TabsContent value="pending" className="mt-4">
+              {isLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : pendingCheckins.length === 0 ? (
+                <Card className="py-12">
+                  <CardContent className="text-center space-y-3">
+                    <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mx-auto">
+                      <Zap className="h-6 w-6 text-muted-foreground" />
+                    </div>
+                    <p className="text-muted-foreground">
+                      Nessun report in attesa. Clicca "Analizza Tutti" per generare i report
+                      settimanali.
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {pendingCheckins.map((checkin) => (
+                    <CheckinCard
+                      key={checkin.id}
+                      checkin={checkin}
+                      onApprove={handleApprove}
+                      onSkip={handleSkip}
+                      onUpdate={handleUpdateText}
+                      isSending={approveAndSend.isPending}
+                    />
+                  ))}
+                </div>
+              )}
+            </TabsContent>
 
-          <TabsContent value="skipped" className="mt-4">
-            {skippedCheckins.length === 0 ? (
-              <Card className="py-12">
-                <CardContent className="text-center">
-                  <p className="text-muted-foreground">Nessun report scartato.</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {skippedCheckins.map((checkin) => (
-                  <CheckinCard
-                    key={checkin.id}
-                    checkin={checkin}
-                    onApprove={handleApprove}
-                    onSkip={handleSkip}
-                    onUpdate={handleUpdateText}
-                    isSending={false}
-                  />
-                ))}
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
-      </div>
-    </CoachLayout>
+            <TabsContent value="sent" className="mt-4">
+              {sentCheckins.length === 0 ? (
+                <Card className="py-12">
+                  <CardContent className="text-center">
+                    <p className="text-muted-foreground">Nessun report inviato.</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {sentCheckins.map((checkin) => (
+                    <CheckinCard
+                      key={checkin.id}
+                      checkin={checkin}
+                      onApprove={handleApprove}
+                      onSkip={handleSkip}
+                      onUpdate={handleUpdateText}
+                      isSending={false}
+                    />
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="skipped" className="mt-4">
+              {skippedCheckins.length === 0 ? (
+                <Card className="py-12">
+                  <CardContent className="text-center">
+                    <p className="text-muted-foreground">Nessun report scartato.</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {skippedCheckins.map((checkin) => (
+                    <CheckinCard
+                      key={checkin.id}
+                      checkin={checkin}
+                      onApprove={handleApprove}
+                      onSkip={handleSkip}
+                      onUpdate={handleUpdateText}
+                      isSending={false}
+                    />
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+        </div>
+      </CoachLayout>
     </>
   );
 }

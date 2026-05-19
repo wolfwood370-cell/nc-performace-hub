@@ -44,9 +44,7 @@ function KpiCard({
   return (
     <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">
-          {label}
-        </span>
+        <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">{label}</span>
         <span className="flex h-8 w-8 items-center justify-center rounded-full bg-sky-50 text-sky-600 [&_svg]:h-4 [&_svg]:w-4">
           {icon}
         </span>
@@ -59,10 +57,25 @@ function KpiCard({
   );
 }
 
-function CustomTooltip({ active, payload, label }: any) {
+// Local shape for the recharts tooltip payload entries we care about.
+// `dataKey` discriminates which series the point belongs to; `value` and
+// the per-point `payload` carry the actual numbers.
+type TooltipPoint = {
+  dataKey: string;
+  value: number | null;
+  payload?: { targetCalories?: number | null };
+};
+
+type CustomTooltipProps = {
+  active?: boolean;
+  payload?: TooltipPoint[];
+  label?: string;
+};
+
+function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
   if (!active || !payload?.length) return null;
-  const logged = payload.find((p: any) => p.dataKey === "loggedCalories")?.value;
-  const weight = payload.find((p: any) => p.dataKey === "weight")?.value;
+  const logged = payload.find((p) => p.dataKey === "loggedCalories")?.value;
+  const weight = payload.find((p) => p.dataKey === "weight")?.value;
   const target = payload[0]?.payload?.targetCalories;
   return (
     <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-lg">
@@ -118,9 +131,7 @@ export function CoachNutritionAnalytics({ athleteId }: CoachNutritionAnalyticsPr
   const avgDelta = data?.avgDelta ?? 0;
   const weightChange = data?.weightChange;
   const target = data?.targetCalories;
-  const weightVals = (data?.data ?? [])
-    .map((d) => d.weight)
-    .filter((v): v is number => v != null);
+  const weightVals = (data?.data ?? []).map((d) => d.weight).filter((v): v is number => v != null);
   const minWeight = weightVals.length ? Math.min(...weightVals) - 1 : 0;
   const maxWeight = weightVals.length ? Math.max(...weightVals) + 1 : 100;
 
@@ -158,11 +169,7 @@ export function CoachNutritionAnalytics({ athleteId }: CoachNutritionAnalyticsPr
         />
         <KpiCard
           label="Deficit/Surplus Medio"
-          value={
-            target == null
-              ? "—"
-              : `${avgDelta > 0 ? "+" : ""}${avgDelta} kcal`
-          }
+          value={target == null ? "—" : `${avgDelta > 0 ? "+" : ""}${avgDelta} kcal`}
           hint={target ? `Target: ${target} kcal/g` : "Nessun target attivo"}
           icon={<Activity />}
           valueClass={
@@ -171,21 +178,17 @@ export function CoachNutritionAnalytics({ athleteId }: CoachNutritionAnalyticsPr
         />
         <KpiCard
           label="Variazione Peso (30g)"
-          value={
-            weightChange == null
-              ? "—"
-              : `${weightChange > 0 ? "+" : ""}${weightChange} kg`
-          }
+          value={weightChange == null ? "—" : `${weightChange > 0 ? "+" : ""}${weightChange} kg`}
           hint={weightChange == null ? "Dati insufficienti" : "Prima vs ultima misura"}
           icon={<Scale />}
           valueClass={
             weightChange == null
               ? "text-slate-400"
               : weightChange < 0
-              ? "text-emerald-600"
-              : weightChange > 0
-              ? "text-amber-600"
-              : "text-slate-900"
+                ? "text-emerald-600"
+                : weightChange > 0
+                  ? "text-amber-600"
+                  : "text-slate-900"
           }
         />
       </div>
@@ -207,10 +210,7 @@ export function CoachNutritionAnalytics({ athleteId }: CoachNutritionAnalyticsPr
             </div>
           ) : (
             <ResponsiveContainer width="100%" height={320}>
-              <ComposedChart
-                data={data.data}
-                margin={{ top: 10, right: 16, left: 0, bottom: 0 }}
-              >
+              <ComposedChart data={data.data} margin={{ top: 10, right: 16, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                 <XAxis
                   dataKey="dateFormatted"
