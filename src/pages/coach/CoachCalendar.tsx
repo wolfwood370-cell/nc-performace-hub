@@ -16,7 +16,6 @@ import { ProgramsDrawer } from "@/components/coach/calendar/ProgramsDrawer";
 import {
   CalendarGrid,
   ScheduledWorkoutLog,
-  CalendarAppointment,
   GoogleBusySlot,
 } from "@/components/coach/calendar/CalendarGrid";
 import { ScheduleWeekDialog } from "@/components/coach/calendar/ScheduleWeekDialog";
@@ -38,6 +37,7 @@ import { toast } from "sonner";
 import { Dumbbell, Calendar, ExternalLink, Users } from "lucide-react";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays } from "date-fns";
 import { log } from "@/lib/logger";
+import { useCoachAppointments } from "@/hooks/useCoachAppointments";
 
 // Types for drag data
 interface DraggedWorkout {
@@ -83,23 +83,7 @@ const MOCK_GOOGLE_BUSY_SLOTS: GoogleBusySlot[] = [
   },
 ];
 
-// Mock appointments
-const MOCK_APPOINTMENTS: CalendarAppointment[] = [
-  {
-    id: "a1",
-    title: "Check-in Marco",
-    type: "check-in",
-    date: format(addDays(new Date(), 2), "yyyy-MM-dd"),
-    time: "16:00",
-  },
-  {
-    id: "a2",
-    title: "PT Session - Luca",
-    type: "pt-session",
-    date: format(addDays(new Date(), 4), "yyyy-MM-dd"),
-    time: "11:00",
-  },
-];
+// `MOCK_APPOINTMENTS` removed — see `useCoachAppointments` (audit M3).
 
 export default function CoachCalendar() {
   const navigate = useNavigate();
@@ -514,6 +498,13 @@ export default function CoachCalendar() {
     [deleteWorkoutLogMutation],
   );
 
+  // Audit M3 closure — real appointments (no more MOCK_APPOINTMENTS).
+  // Scoped to the visible date range so we never over-fetch.
+  const { appointments } = useCoachAppointments({
+    startDate: dateRange.start,
+    endDate: dateRange.end,
+  });
+
   const selectedAthlete = athletes.find((a) => a.id === selectedAthleteId);
 
   return (
@@ -610,7 +601,6 @@ export default function CoachCalendar() {
                 ) : (
                   <CalendarGrid
                     workoutLogs={workoutLogs}
-                    appointments={MOCK_APPOINTMENTS}
                     googleBusySlots={MOCK_GOOGLE_BUSY_SLOTS}
                     onDateSelect={setSelectedDate}
                     selectedDate={selectedDate}
@@ -622,6 +612,7 @@ export default function CoachCalendar() {
                     onToggleGoogleEvents={setShowGoogleEvents}
                     onDeleteWorkout={handleDeleteWorkoutLog}
                     isDeletingWorkout={deleteWorkoutLogMutation.isPending}
+                    appointments={appointments}
                   />
                 )}
               </CardContent>

@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Calendar, ChevronLeft, ChevronRight, Layers, Pencil, Clock, Target } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -33,23 +34,30 @@ import {
 } from "date-fns";
 import { it } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
+import { useCoachTrainingBlocks } from "@/hooks/useCoachTrainingBlocks";
 
 // ── Types ─────────────────────────────────────────────────────────────
 
+// Re-exports the hook's TrainingBlock shape, with the legacy optional
+// fields (`programId`, `notes`) kept for any future caller that passes
+// blocks via prop.
 interface TrainingBlock {
   id: string;
   name: string;
   focusType: string;
   startDate: Date;
   endDate: Date;
-  athleteName?: string;
+  athleteName?: string | null;
   athleteId?: string;
   programId?: string;
   notes?: string;
 }
 
 interface MacroCycleTimelineProps {
-  /** Override blocks; if omitted, uses mock data */
+  /**
+   * Override blocks. If omitted, the component fetches the current
+   * coach's `training_phases` via `useCoachTrainingBlocks` (audit M3).
+   */
   blocks?: TrainingBlock[];
   /** Number of months to show (default: 8) */
   monthsToShow?: number;
@@ -104,76 +112,6 @@ const PHASE_STYLES: Record<string, { bg: string; border: string; text: string; l
 
 const getPhaseStyle = (focusType: string) => PHASE_STYLES[focusType] ?? PHASE_STYLES.transition;
 
-// ── Mock data ─────────────────────────────────────────────────────────
-
-const now = new Date();
-
-const MOCK_BLOCKS: TrainingBlock[] = [
-  {
-    id: "b1",
-    name: "Anatomical Adaptation",
-    focusType: "hypertrophy",
-    startDate: new Date(now.getFullYear(), now.getMonth() - 1, 1),
-    endDate: new Date(now.getFullYear(), now.getMonth(), 14),
-    athleteName: "Marco R.",
-    athleteId: "a1",
-  },
-  {
-    id: "b2",
-    name: "Max Strength Phase",
-    focusType: "strength",
-    startDate: new Date(now.getFullYear(), now.getMonth(), 15),
-    endDate: new Date(now.getFullYear(), now.getMonth() + 1, 25),
-    athleteName: "Marco R.",
-    athleteId: "a1",
-  },
-  {
-    id: "b3",
-    name: "Power Development",
-    focusType: "power",
-    startDate: new Date(now.getFullYear(), now.getMonth() + 1, 26),
-    endDate: new Date(now.getFullYear(), now.getMonth() + 3, 5),
-    athleteName: "Marco R.",
-    athleteId: "a1",
-  },
-  {
-    id: "b4",
-    name: "Competition Prep",
-    focusType: "peaking",
-    startDate: new Date(now.getFullYear(), now.getMonth() + 3, 6),
-    endDate: new Date(now.getFullYear(), now.getMonth() + 3, 20),
-    athleteName: "Marco R.",
-    athleteId: "a1",
-  },
-  {
-    id: "b5",
-    name: "Active Recovery",
-    focusType: "recovery",
-    startDate: new Date(now.getFullYear(), now.getMonth() + 3, 21),
-    endDate: new Date(now.getFullYear(), now.getMonth() + 4, 10),
-    athleteName: "Marco R.",
-    athleteId: "a1",
-  },
-  {
-    id: "b6",
-    name: "Hypertrophy Block",
-    focusType: "hypertrophy",
-    startDate: new Date(now.getFullYear(), now.getMonth(), 1),
-    endDate: new Date(now.getFullYear(), now.getMonth() + 2, 0),
-    athleteName: "Sofia L.",
-    athleteId: "a2",
-  },
-  {
-    id: "b7",
-    name: "Endurance Base",
-    focusType: "endurance",
-    startDate: new Date(now.getFullYear(), now.getMonth() + 2, 1),
-    endDate: new Date(now.getFullYear(), now.getMonth() + 4, 15),
-    athleteName: "Sofia L.",
-    athleteId: "a2",
-  },
-];
-
 // ── Component ─────────────────────────────────────────────────────────
 
 export function MacroCycleTimeline({
@@ -185,7 +123,15 @@ export function MacroCycleTimeline({
   const [athleteFilter, setAthleteFilter] = useState<string>("all");
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const blocks = externalBlocks ?? MOCK_BLOCKS;
+  // Audit M3 closure: when no externalBlocks prop is passed, fetch from
+  // `training_phases` via the dedicated hook instead of using mock data.
+  const { blocks: fetchedBlocks, isLoading: blocksLoading } = useCoachTrainingBlocks();
+  const blocks = externalBlocks ?? fetchedBlocks;
+
+  // `now` was previously a module-level const tied to MOCK_BLOCKS. Now
+  // computed per-render — re-computation is cheap and avoids stale dates
+  // when the user keeps the tab open across day boundaries.
+  const now = useMemo(() => new Date(), []);
 
   // Unique athlete list
   const athletes = useMemo(() => {
@@ -248,6 +194,23 @@ export function MacroCycleTimeline({
   };
 
   const todayOffset = differenceInDays(now, timelineStart) * PX_PER_DAY;
+
+  // Loading state — only show when we fetched via the hook (no
+  // externalBlocks prop) and the query is still in flight.
+  if (!externalBlocks && blocksLoading) {
+    return (
+      <Card className="overflow-hidden">
+        <CardHeader>
+          <Skeleton className="h-6 w-48" />
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Skeleton className="h-8 w-full" />
+          <Skeleton className="h-16 w-full" />
+          <Skeleton className="h-16 w-full" />
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <>

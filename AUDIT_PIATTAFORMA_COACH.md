@@ -58,7 +58,7 @@ Sessione di cleanup eseguita sul branch `claude/flamboyant-hertz-937c2d`. Lo sta
 | Severità        | Chiusi ✅                                                                      | Parziali 🟡           | Pendenti ❌ |
 | --------------- | ------------------------------------------------------------------------------ | --------------------- | ----------- |
 | 🔴 Critical (4) | **C1, C2, C4**                                                                 | C3 (1/8 tab estratti) | —           |
-| 🟡 Medium (13)  | **M1, M2, M4, M5, M6, M7, M8, M9, M10, M11, M12, M13** (de-facto chiuso da C2) | M3 (1/6 zone)         | —           |
+| 🟡 Medium (13)  | **M1, M2, M4, M5, M6, M7, M8, M9, M10, M11, M12, M13** (de-facto chiuso da C2) | M3 (3/6 zone)         | —           |
 | 🔵 Low (9)      | **B1, B2, B3, B4, B5, B6, B7, B8, B9**                                         | —                     | —           |
 
 **Totale**: **24/26 finding completamente chiusi (92%)**, 2 parziali (M3, C3), 0 pendenti.
@@ -177,7 +177,7 @@ Sessione di cleanup eseguita sul branch `claude/flamboyant-hertz-937c2d`. Lo sta
 - **Impatto**: race condition fragile. Su rete lenta, 500ms non basta → room non trovata, UX rotta. Su rete veloce, ritardo gratuito di mezzo secondo.
 - **Fix**: usare `useEffect([rooms])` per reagire al cambio di state, oppure `mutation.onSuccess` che riceve direttamente la room id e setta il currentRoom subito.
 
-### M3. 🟡 6 zone con mock data hardcoded usato come UI primaria _(1/6 chiuso in `efd7cfc`, 5 zone rimanenti pendenti)_
+### M3. 🟡 6 zone con mock data hardcoded usato come UI primaria _(3/6 chiusi: `efd7cfc` ProgramBuilder dead `buildMockExercise` rimosso, MOCK_BLOCKS in MacroCycleTimeline ora via `useCoachTrainingBlocks` da `training_phases`, MOCK_APPOINTMENTS in CoachCalendar ora via `useCoachAppointments` + migrazione `20260519120000_appointments.sql`. Restano 3 zone con integrazioni esterne: MOCK_GOOGLE_BUSY_SLOTS, Stripe placeholder, BarPathGallery)_
 
 - **Dove**:
   - [`CoachCalendar.tsx:72-81`](src/pages/coach/CoachCalendar.tsx) — `MOCK_GOOGLE_BUSY_SLOTS`, `MOCK_APPOINTMENTS` passati direttamente a `<CalendarGrid>`
