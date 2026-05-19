@@ -266,7 +266,13 @@ export function ChatPane({
       <div className="h-14 shrink-0 border-b flex items-center justify-between px-4">
         <div className="flex items-center gap-3">
           {showBackButton && (
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onBack}>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Indietro"
+              className="h-8 w-8"
+              onClick={onBack}
+            >
               <ArrowLeft className="h-4 w-4" />
             </Button>
           )}
@@ -289,7 +295,13 @@ export function ChatPane({
           </div>
         </div>
 
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onToggleContext}>
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Informazioni atleta"
+          className="h-8 w-8"
+          onClick={onToggleContext}
+        >
           <Info className="h-4 w-4" />
         </Button>
       </div>

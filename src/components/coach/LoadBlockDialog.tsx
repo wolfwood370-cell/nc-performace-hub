@@ -66,13 +66,15 @@ export function LoadBlockDialog({
 
       const { data, error } = await supabase
         .from("program_plans")
-        .select(`
+        .select(
+          `
           id,
           name,
           description,
           created_at,
           program_weeks(id)
-        `)
+        `,
+        )
         .eq("coach_id", user.id)
         .eq("is_template", true)
         .order("created_at", { ascending: false });
@@ -126,7 +128,7 @@ export function LoadBlockDialog({
   };
 
   const filteredTemplates = templates.filter((t) =>
-    t.name.toLowerCase().includes(searchQuery.toLowerCase())
+    t.name.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   const selectedTemplate = templates.find((t) => t.id === selectedTemplateId);
@@ -139,9 +141,7 @@ export function LoadBlockDialog({
             <Download className="h-5 w-5 text-primary" />
             Carica Blocco Template
           </DialogTitle>
-          <DialogDescription>
-            Inserisci un blocco salvato nel programma corrente
-          </DialogDescription>
+          <DialogDescription>Inserisci un blocco salvato nel programma corrente</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
@@ -168,9 +168,7 @@ export function LoadBlockDialog({
               <div className="flex flex-col items-center justify-center h-full p-6 text-center">
                 <Layers className="h-8 w-8 text-muted-foreground/50 mb-2" />
                 <p className="text-sm text-muted-foreground">
-                  {searchQuery
-                    ? "Nessun template trovato"
-                    : "Nessun template salvato"}
+                  {searchQuery ? "Nessun template trovato" : "Nessun template salvato"}
                 </p>
               </div>
             ) : (
@@ -182,7 +180,7 @@ export function LoadBlockDialog({
                       "flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors border group",
                       selectedTemplateId === template.id
                         ? "bg-primary/10 border-primary"
-                        : "hover:bg-secondary border-transparent"
+                        : "hover:bg-secondary border-transparent",
                     )}
                     onClick={() => setSelectedTemplateId(template.id)}
                   >
@@ -204,6 +202,8 @@ export function LoadBlockDialog({
                       variant="ghost"
                       size="icon"
                       className="h-7 w-7 opacity-0 group-hover:opacity-100 text-destructive hover:text-destructive"
+                      aria-label="Elimina template"
+                      disabled={deleteMutation.isPending}
                       onClick={(e) => {
                         e.stopPropagation();
                         deleteMutation.mutate(template.id);
@@ -231,16 +231,13 @@ export function LoadBlockDialog({
                 <SelectContent>
                   {Array.from({ length: totalWeeks + 1 }, (_, i) => (
                     <SelectItem key={i} value={i.toString()}>
-                      {i === totalWeeks
-                        ? `Aggiungi alla fine (S${i + 1}+)`
-                        : `Settimana ${i + 1}`}
+                      {i === totalWeeks ? `Aggiungi alla fine (S${i + 1}+)` : `Settimana ${i + 1}`}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               <p className="text-[10px] text-muted-foreground">
-                Le settimane esistenti da S{insertAtWeek + 1} saranno spostate in
-                avanti
+                Le settimane esistenti da S{insertAtWeek + 1} saranno spostate in avanti
               </p>
             </div>
           )}
