@@ -34,20 +34,8 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import {
-  Dumbbell,
-  Calendar,
-  ExternalLink,
-  Users,
-} from "lucide-react";
-import {
-  format,
-  startOfMonth,
-  endOfMonth,
-  startOfWeek,
-  endOfWeek,
-  addDays,
-} from "date-fns";
+import { Dumbbell, Calendar, ExternalLink, Users } from "lucide-react";
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays } from "date-fns";
 
 // Types for drag data
 interface DraggedWorkout {
@@ -70,15 +58,45 @@ interface Athlete {
 
 // Mock Google Calendar busy slots (for UI preparation)
 const MOCK_GOOGLE_BUSY_SLOTS: GoogleBusySlot[] = [
-  { id: "g1", title: "Riunione Team", date: format(new Date(), "yyyy-MM-dd"), startTime: "10:00", endTime: "11:00" },
-  { id: "g2", title: "Call Cliente", date: format(addDays(new Date(), 1), "yyyy-MM-dd"), startTime: "14:00", endTime: "15:00" },
-  { id: "g3", title: "Appuntamento", date: format(addDays(new Date(), 3), "yyyy-MM-dd"), startTime: "09:00", endTime: "10:30" },
+  {
+    id: "g1",
+    title: "Riunione Team",
+    date: format(new Date(), "yyyy-MM-dd"),
+    startTime: "10:00",
+    endTime: "11:00",
+  },
+  {
+    id: "g2",
+    title: "Call Cliente",
+    date: format(addDays(new Date(), 1), "yyyy-MM-dd"),
+    startTime: "14:00",
+    endTime: "15:00",
+  },
+  {
+    id: "g3",
+    title: "Appuntamento",
+    date: format(addDays(new Date(), 3), "yyyy-MM-dd"),
+    startTime: "09:00",
+    endTime: "10:30",
+  },
 ];
 
 // Mock appointments
 const MOCK_APPOINTMENTS: CalendarAppointment[] = [
-  { id: "a1", title: "Check-in Marco", type: "check-in", date: format(addDays(new Date(), 2), "yyyy-MM-dd"), time: "16:00" },
-  { id: "a2", title: "PT Session - Luca", type: "pt-session", date: format(addDays(new Date(), 4), "yyyy-MM-dd"), time: "11:00" },
+  {
+    id: "a1",
+    title: "Check-in Marco",
+    type: "check-in",
+    date: format(addDays(new Date(), 2), "yyyy-MM-dd"),
+    time: "16:00",
+  },
+  {
+    id: "a2",
+    title: "PT Session - Luca",
+    type: "pt-session",
+    date: format(addDays(new Date(), 4), "yyyy-MM-dd"),
+    time: "11:00",
+  },
 ];
 
 export default function CoachCalendar() {
@@ -93,9 +111,18 @@ export default function CoachCalendar() {
   const [selectedAthleteId, setSelectedAthleteId] = useState<string | null>(null);
   const [showGoogleEvents, setShowGoogleEvents] = useState(false);
 
-  // Drag state
+  // Drag state. Discriminated union mirroring the two payload shapes that
+  // dnd-kit's `event.active.data.current` can carry on this page — set by
+  // the drag-source components in ProgramsDrawer.
+  type CalendarDragData =
+    | { type: "calendar-workout"; workout: { id?: string; name: string } }
+    | {
+        type: "calendar-week";
+        week: { id?: string; name?: string | null; week_order: number };
+      };
+
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [activeDragData, setActiveDragData] = useState<any>(null);
+  const [activeDragData, setActiveDragData] = useState<CalendarDragData | null>(null);
 
   // Confirmation dialog state
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
@@ -124,7 +151,7 @@ export default function CoachCalendar() {
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 8 },
-    })
+    }),
   );
 
   // Fetch coach's athletes
@@ -191,7 +218,7 @@ export default function CoachCalendar() {
           workout_id,
           workouts!workout_logs_workout_id_fkey(title),
           profiles!workout_logs_athlete_id_fkey(full_name, avatar_url)
-        `
+        `,
         )
         .eq("athlete_id", selectedAthleteId)
         .gte("scheduled_date", dateRange.start)
@@ -200,7 +227,22 @@ export default function CoachCalendar() {
 
       if (error) throw error;
 
-      return (data ?? []).map((log: any) => ({
+      // Local row type for the nested `select(...)` shape above.
+      // Supabase generic typing collapses embedded relations to `unknown`,
+      // so we name it explicitly here instead of an `any` cast.
+      type ScheduledWorkoutLogRow = {
+        id: string;
+        status: string;
+        scheduled_date: string | null;
+        scheduled_start_time: string | null;
+        program_workout_id: string | null;
+        athlete_id: string;
+        workout_id: string | null;
+        workouts: { title: string | null } | null;
+        profiles: { full_name: string | null; avatar_url: string | null } | null;
+      };
+
+      return ((data ?? []) as unknown as ScheduledWorkoutLogRow[]).map((log) => ({
         id: log.id,
         status: log.status as "scheduled" | "completed" | "missed",
         scheduled_date: log.scheduled_date,
@@ -325,14 +367,11 @@ export default function CoachCalendar() {
         });
       }
     },
-    [selectedAthleteId]
+    [selectedAthleteId],
   );
 
   // Fetch workouts for a week (for Smart Paste)
-  const fetchWeekWorkouts = async (
-    weekId: string,
-    _planId: string
-  ): Promise<DraggedWorkout[]> => {
+  const fetchWeekWorkouts = async (weekId: string, _planId: string): Promise<DraggedWorkout[]> => {
     const { data: days, error: daysError } = await supabase
       .from("program_days")
       .select("id, day_number")
@@ -359,25 +398,22 @@ export default function CoachCalendar() {
   };
 
   // Handle single workout confirmation - now uses selectedAthleteId directly
-  const handleConfirmSchedule = useCallback(
-    async () => {
-      if (!pendingSchedule || !selectedAthleteId) return;
+  const handleConfirmSchedule = useCallback(async () => {
+    if (!pendingSchedule || !selectedAthleteId) return;
 
-      const { workout, targetDate } = pendingSchedule;
-      const targetDateKey = format(targetDate, "yyyy-MM-dd");
+    const { workout, targetDate } = pendingSchedule;
+    const targetDateKey = format(targetDate, "yyyy-MM-dd");
 
-      await scheduleWorkoutMutation.mutateAsync({
-        programWorkoutId: workout.id,
-        workoutName: workout.name,
-        athleteId: selectedAthleteId,
-        scheduledDate: targetDateKey,
-      });
+    await scheduleWorkoutMutation.mutateAsync({
+      programWorkoutId: workout.id,
+      workoutName: workout.name,
+      athleteId: selectedAthleteId,
+      scheduledDate: targetDateKey,
+    });
 
-      setConfirmDialogOpen(false);
-      setPendingSchedule(null);
-    },
-    [pendingSchedule, selectedAthleteId, scheduleWorkoutMutation]
-  );
+    setConfirmDialogOpen(false);
+    setPendingSchedule(null);
+  }, [pendingSchedule, selectedAthleteId, scheduleWorkoutMutation]);
 
   // Handle week schedule confirmation - uses RPC function
   const handleConfirmWeekSchedule = useCallback(async () => {
@@ -399,7 +435,7 @@ export default function CoachCalendar() {
       setWeekDialogOpen(false);
       setPendingWeekSchedule(null);
       toast.success(
-        `${data} workout programmati per ${week.name || `Settimana ${week.week_order}`}`
+        `${data} workout programmati per ${week.name || `Settimana ${week.week_order}`}`,
       );
     } catch (error) {
       console.error("Week schedule error:", error);
@@ -410,7 +446,13 @@ export default function CoachCalendar() {
   // Delete workout log mutation
   const deleteWorkoutLogMutation = useMutation({
     mutationFn: async (logId: string) => {
-      // First get the workout_id to delete it too
+      if (!user?.id) throw new Error("Non autenticato.");
+
+      // Fetch the parent workout_id. workout_logs has no coach_id column
+      // (ownership flows via athlete_id → profiles.coach_id), so this
+      // query relies on RLS for cross-coach isolation. If RLS is misconfigured
+      // the .single() will return a row of another coach — server-side
+      // policies are the only safety net here.
       const { data: log, error: fetchError } = await supabase
         .from("workout_logs")
         .select("workout_id")
@@ -419,7 +461,7 @@ export default function CoachCalendar() {
 
       if (fetchError) throw fetchError;
 
-      // Delete the workout log
+      // Delete the workout log. Same RLS-only constraint as above.
       const { error: logDeleteError } = await supabase
         .from("workout_logs")
         .delete()
@@ -427,12 +469,17 @@ export default function CoachCalendar() {
 
       if (logDeleteError) throw logDeleteError;
 
-      // Soft-delete the associated workout if exists
+      // Soft-delete the associated workout. workouts.coach_id IS a real
+      // column, so we add defense-in-depth: even if RLS is missing or
+      // loosened in a future migration, the .eq("coach_id", user.id)
+      // guarantees we only touch our own rows. The cast removed because
+      // `deleted_at` is part of TablesUpdate<"workouts">.
       if (log?.workout_id) {
         await supabase
           .from("workouts")
-          .update({ deleted_at: new Date().toISOString() } as any)
-          .eq("id", log.workout_id);
+          .update({ deleted_at: new Date().toISOString() })
+          .eq("id", log.workout_id)
+          .eq("coach_id", user.id);
       }
     },
     onSuccess: () => {
@@ -445,9 +492,12 @@ export default function CoachCalendar() {
     },
   });
 
-  const handleDeleteWorkoutLog = useCallback((logId: string) => {
-    deleteWorkoutLogMutation.mutate(logId);
-  }, [deleteWorkoutLogMutation]);
+  const handleDeleteWorkoutLog = useCallback(
+    (logId: string) => {
+      deleteWorkoutLogMutation.mutate(logId);
+    },
+    [deleteWorkoutLogMutation],
+  );
 
   const selectedAthlete = athletes.find((a) => a.id === selectedAthleteId);
 
@@ -475,10 +525,7 @@ export default function CoachCalendar() {
                   <Users className="h-4 w-4" />
                   <span>Atleta:</span>
                 </div>
-                <Select
-                  value={selectedAthleteId || ""}
-                  onValueChange={setSelectedAthleteId}
-                >
+                <Select value={selectedAthleteId || ""} onValueChange={setSelectedAthleteId}>
                   <SelectTrigger className="w-48 h-9">
                     <SelectValue placeholder="Seleziona atleta" />
                   </SelectTrigger>
@@ -559,17 +606,14 @@ export default function CoachCalendar() {
           {activeId && activeDragData?.type === "calendar-workout" && (
             <div className="flex items-center gap-2 p-3 rounded-lg bg-primary text-primary-foreground shadow-xl">
               <Dumbbell className="h-4 w-4" />
-              <span className="text-sm font-medium">
-                {activeDragData.workout.name}
-              </span>
+              <span className="text-sm font-medium">{activeDragData.workout.name}</span>
             </div>
           )}
           {activeId && activeDragData?.type === "calendar-week" && (
             <div className="flex items-center gap-2 p-3 rounded-lg bg-primary text-primary-foreground shadow-xl">
               <Calendar className="h-4 w-4" />
               <span className="text-sm font-medium">
-                {activeDragData.week.name ||
-                  `Settimana ${activeDragData.week.week_order}`}
+                {activeDragData.week.name || `Settimana ${activeDragData.week.week_order}`}
               </span>
             </div>
           )}
@@ -595,8 +639,7 @@ export default function CoachCalendar() {
           open={weekDialogOpen}
           onOpenChange={setWeekDialogOpen}
           weekName={
-            pendingWeekSchedule.week.name ||
-            `Settimana ${pendingWeekSchedule.week.week_order}`
+            pendingWeekSchedule.week.name || `Settimana ${pendingWeekSchedule.week.week_order}`
           }
           startDate={pendingWeekSchedule.startDate}
           workouts={pendingWeekSchedule.workouts}
