@@ -43,6 +43,10 @@ export function useWorkoutTemplates() {
 
       return (data || []).map((t) => ({
         ...t,
+        // JSONB column read: Supabase types `structure` as `Json` (no index
+        // signature). The `as unknown as ProgramExercise[]` bridge is the
+        // only TS-accepted way to narrow without runtime validation. Move
+        // to zod parsing here when the schema stabilises.
         structure: (t.structure as unknown as ProgramExercise[]) || [],
         tags: t.tags || [],
       })) as WorkoutTemplate[];

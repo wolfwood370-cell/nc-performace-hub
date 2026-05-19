@@ -143,7 +143,10 @@ export default function CoachSettings() {
       if (error) throw error;
       if (!data) return null;
 
-      // Type-safe access to profile data including new columns
+      // Bridge cast unavoidable: the generated `Tables<"profiles">` types
+      // `social_links` and `preferences` as `Json`, but here we read them
+      // as structured `SocialLinks` / `Preferences`. Replacing this would
+      // need either zod runtime validation or a typed view.
       const profileData = data as unknown as {
         id: string;
         full_name: string | null;

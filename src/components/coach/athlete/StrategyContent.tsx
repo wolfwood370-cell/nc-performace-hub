@@ -307,6 +307,9 @@ export function StrategyContent({ athleteId }: StrategyContentProps) {
       return {
         ...data,
         strategy_mode: (data.strategy_mode || "static") as StrategyMode,
+        // JSONB column read: `cycling_targets` is typed as `Json` by
+        // Supabase but consumed as a structured `CyclingTargets`. Bridge
+        // through `unknown` is the only TS-accepted narrowing.
         cycling_targets: data.cycling_targets as unknown as CyclingTargets | null,
       } as NutritionPlan;
     },

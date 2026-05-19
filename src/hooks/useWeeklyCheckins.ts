@@ -44,6 +44,12 @@ export function useWeeklyCheckins() {
 
       if (error) throw error;
 
+      // Bridge cast through `unknown` is unavoidable here: the generated
+      // `Tables<"weekly_checkins">` types `metrics_snapshot` as `Json` and
+      // `status` as `string`, but the consumer-facing `WeeklyCheckin`
+      // interface narrows them to a structured object and a union. Direct
+      // `as WeeklyCheckin[]` would error TS2352. Replacing this would
+      // require zod runtime validation at the boundary.
       const rows = (data ?? []) as unknown as WeeklyCheckin[];
 
       // Fetch athlete profiles

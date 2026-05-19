@@ -243,6 +243,11 @@ export default function CoachCalendar() {
         profiles: { full_name: string | null; avatar_url: string | null } | null;
       };
 
+      // Bridge cast unavoidable: Supabase types the nested joins
+      // (`workouts(title)`, `profiles(full_name, avatar_url)`) as arrays in
+      // some shapes and singletons in others. The local `ScheduledWorkoutLogRow`
+      // narrows to singleton. Replacing this needs an explicit `!inner` join
+      // or a typed view.
       return ((data ?? []) as unknown as ScheduledWorkoutLogRow[]).map((log) => ({
         id: log.id,
         status: log.status as "scheduled" | "completed" | "missed",

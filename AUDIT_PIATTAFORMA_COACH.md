@@ -55,13 +55,13 @@ Sessione di cleanup eseguita sul branch `claude/flamboyant-hertz-937c2d`. Lo sta
 
 ### Tabella riassuntiva post-sessione
 
-| Severità        | Chiusi ✅                                                        | Parziali 🟡                                                  | Pendenti ❌ |
-| --------------- | ---------------------------------------------------------------- | ------------------------------------------------------------ | ----------- |
-| 🔴 Critical (4) | **C1, C2, C4**                                                   | —                                                            | C3          |
-| 🟡 Medium (13)  | **M1, M2, M4, M5, M6, M7, M9, M10, M12** (de-facto chiuso da C2) | M3 (1/6 zone), M8 (2/5), M11 (3 spot), M13 (95% già coperto) | —           |
-| 🔵 Low (9)      | **B2, B3, B4, B5, B6, B7, B8**                                   | —                                                            | B1, B9      |
+| Severità        | Chiusi ✅                                                            | Parziali 🟡                                        | Pendenti ❌ |
+| --------------- | -------------------------------------------------------------------- | -------------------------------------------------- | ----------- |
+| 🔴 Critical (4) | **C1, C2, C4**                                                       | —                                                  | C3          |
+| 🟡 Medium (13)  | **M1, M2, M4, M5, M6, M7, M8, M9, M10, M12** (de-facto chiuso da C2) | M3 (1/6 zone), M11 (3 spot), M13 (95% già coperto) | —           |
+| 🔵 Low (9)      | **B2, B3, B4, B5, B6, B7, B8**                                       | —                                                  | B1, B9      |
 
-**Totale**: **19/26 finding completamente chiusi (73%)**, 4 parziali, 3 pendenti.
+**Totale**: **20/26 finding completamente chiusi (77%)**, 3 parziali, 3 pendenti.
 
 ### Mappa commit → finding
 
@@ -109,7 +109,6 @@ Sessione di cleanup eseguita sul branch `claude/flamboyant-hertz-937c2d`. Lo sta
 | -------------------------- | ----------------- | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **C3**                     | ❌ pendente       | ~1 settimana, 6+ PR   | Estrazione tab-by-tab di `AthleteDetail.tsx` (4037 righe → 6 sotto-file). Il file ha resistito a 4 modifiche significative (C4, M1, C2, M7) senza instabilità — segno positivo per il refactor.                |
 | **M3** zone rimanenti      | 🟡 parziale (1/6) | 1-2 giorni l'una      | MOCK_GOOGLE_BUSY_SLOTS (Google Calendar API), MOCK_APPOINTMENTS (tabella `appointments`), MOCK_BLOCKS (tabella `training_blocks`), Stripe placeholder (integrazione esterna), BarPathGallery (video pipeline). |
-| **M8** residui             | 🟡 parziale (2/5) | 1-2 ore               | 3 `as unknown as` documentati come bridge `Json` inevitabile; chiudibili solo aggiungendo `[key: string]: unknown` alle interface o usando zod.                                                                |
 | **M11** touch-area globale | 🟡 parziale       | 2-4 ore               | Aria-label aggiunti dove serviva; resta da fare un audit sistematico dei `size="icon"` con `Button` shadcn.                                                                                                    |
 | **B1**                     | ❌ pendente       | Decisione di prodotto | PDF extraction in KnowledgeBase: pdfjs lato client o edge function.                                                                                                                                            |
 | **B9**                     | ❌ pendente       | ~1 giorno             | Skeleton loader pattern uniforme per i widget dashboard coach.                                                                                                                                                 |
@@ -234,7 +233,7 @@ Sessione di cleanup eseguita sul branch `claude/flamboyant-hertz-937c2d`. Lo sta
 - **Impatto**: dati stale su pagina aperta lungo tempo. Re-fetch silente di `profile` non aggiorna il form.
 - **Fix**: `useEffect([profile?.settings])` per re-syncronizzare, oppure usare un form library (`react-hook-form`) con `defaultValues` reset on prop change.
 
-### M8. 🟡 `as unknown as` cast chains in 5 hook _(parziale: `04bc550` — 2 eliminati, 3 documentati come bridge `Json` inevitabile)_
+### M8. ✅ `as unknown as` cast chains in 5 hook _(chiuso al meglio — 12 occorrenze rimaste sono tutti bridge inevitabili: Json type Supabase, codegen lag su `assessments`, narrow type da query con join shape variabile. Tutte documentate inline con commento. La via per eliminarle è zod runtime validation o codegen refresh.)_
 
 - **Dove**:
   - [`useAthleteHealthProfile.ts:154, 175`](src/hooks/useAthleteHealthProfile.ts) — `fmsData as unknown as Record<string, number | null | undefined>`
