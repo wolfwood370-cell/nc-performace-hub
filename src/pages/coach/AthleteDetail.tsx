@@ -1994,7 +1994,6 @@ function SettingsContent({
   );
   const [fullName, setFullName] = useState(profile?.full_name || "");
   const [coachNotes, setCoachNotes] = useState((profile?.settings as any)?.coach_notes || "");
-  const [isSaving, setIsSaving] = useState(false);
 
   // Get status badge config
   const getStatusConfig = (status: string) => {
@@ -2115,9 +2114,11 @@ function SettingsContent({
   });
 
   const handleSave = () => {
-    setIsSaving(true);
+    // Loading state is sourced from `saveProfileMutation.isPending`
+    // directly (see the button below). The previous local `isSaving`
+    // flag was set true → mutate() → set false synchronously, which
+    // turned the spinner off before the mutation even completed.
     saveProfileMutation.mutate();
-    setIsSaving(false);
   };
 
   return (
