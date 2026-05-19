@@ -1,0 +1,12 @@
+node_modules
+dist
+build
+.next
+coverage
+*.lock
+package-lock.json
+bun.lock
+bun.lockb
+supabase/migrations
+src/integrations/supabase/types.ts
+LINT_BASELINE.txt

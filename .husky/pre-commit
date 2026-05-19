@@ -1,0 +1,6 @@
+# Pre-commit gate — runs lint + prettier on staged files only,
+# then a fast project-wide tsc --noEmit to catch any cross-file
+# type regressions before they land in main.
+
+npx lint-staged || exit 1
+npx tsc --noEmit || exit 1
