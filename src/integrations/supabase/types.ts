@@ -35,56 +35,6 @@ export type Database = {
         }
         Relationships: []
       }
-      appointments: {
-        Row: {
-          athlete_id: string
-          coach_id: string
-          created_at: string
-          date: string
-          duration_min: number | null
-          id: string
-          notes: string | null
-          time: string | null
-          title: string
-          type: string
-          updated_at: string
-        }
-        Insert: {
-          athlete_id: string
-          coach_id: string
-          created_at?: string
-          date: string
-          duration_min?: number | null
-          id?: string
-          notes?: string | null
-          time?: string | null
-          title: string
-          type?: string
-          updated_at?: string
-        }
-        Update: {
-          athlete_id?: string
-          coach_id?: string
-          created_at?: string
-          date?: string
-          duration_min?: number | null
-          id?: string
-          notes?: string | null
-          time?: string | null
-          title?: string
-          type?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "appointments_athlete_id_fkey"
-            columns: ["athlete_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       athlete_ai_insights: {
         Row: {
           action_items: string[]
@@ -354,45 +304,33 @@ export type Database = {
       }
       body_measurements: {
         Row: {
-          arm_cm: number | null
           athlete_id: string
           body_fat_percentage: number | null
-          chest_cm: number | null
           created_at: string
           date: string
           id: string
           muscle_mass_kg: number | null
-          thigh_cm: number | null
           updated_at: string
-          waist_cm: number | null
           weight_kg: number | null
         }
         Insert: {
-          arm_cm?: number | null
           athlete_id: string
           body_fat_percentage?: number | null
-          chest_cm?: number | null
           created_at?: string
           date?: string
           id?: string
           muscle_mass_kg?: number | null
-          thigh_cm?: number | null
           updated_at?: string
-          waist_cm?: number | null
           weight_kg?: number | null
         }
         Update: {
-          arm_cm?: number | null
           athlete_id?: string
           body_fat_percentage?: number | null
-          chest_cm?: number | null
           created_at?: string
           date?: string
           id?: string
           muscle_mass_kg?: number | null
-          thigh_cm?: number | null
           updated_at?: string
-          waist_cm?: number | null
           weight_kg?: number | null
         }
         Relationships: [
