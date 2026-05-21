@@ -243,7 +243,7 @@ export function CoachSidebar() {
       >
         {/* System group */}
         {!isCollapsed && (
-          <p className="px-3 text-xs font-semibold uppercase tracking-wider text-on-surface-variant/70">
+          <p className="px-3 text-xs font-semibold uppercase tracking-wider text-on-surface-variant">
             Sistema
           </p>
         )}
@@ -359,7 +359,7 @@ function SidebarNavGroup({
     <div>
       {!isCollapsed && (
         <p
-          className="px-4 mb-2 text-xs font-semibold uppercase tracking-wider text-on-surface-variant/70"
+          className="px-4 mb-2 text-xs font-semibold uppercase tracking-wider text-on-surface-variant"
           aria-label={label}
         >
           {label}
@@ -431,9 +431,12 @@ function SidebarLinkRow({
         isCollapsed ? "h-11 w-11 justify-center mx-auto" : "h-11 px-4 w-full",
       )}
       activeClassName={cn(
-        "bg-primary-container text-on-primary shadow-[0_4px_14px_rgb(0_62_98_/_0.20)]",
+        // `text-white` over `text-on-primary` per la correzione Lovable
+        // (d401e22) — semanticamente identici (on-primary == #ffffff)
+        // ma più resiliente a future variazioni di palette.
+        "bg-primary-container text-white shadow-[0_4px_14px_rgb(0_62_98_/_0.20)]",
         // Lock hover state so the row stays solid while active.
-        "hover:bg-primary-container hover:text-on-primary",
+        "hover:bg-primary-container hover:text-white",
       )}
     >
       {({ isActive }) => (
