@@ -323,7 +323,7 @@ export default function CoachCheckinInbox() {
                         "inline-flex items-center gap-1.5 h-8 px-3 rounded-full text-xs font-bold transition-all duration-200",
                         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
                         isActive
-                          ? "bg-primary-container text-on-primary shadow-[0_2px_8px_rgb(0_62_98_/_0.20)]"
+                          ? "bg-primary-container text-white shadow-[0_2px_8px_rgb(0_62_98_/_0.20)]"
                           : "bg-surface-container-low text-on-surface-variant hover:bg-primary-container/10 hover:text-on-surface",
                       )}
                     >
