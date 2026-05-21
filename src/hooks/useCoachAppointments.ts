@@ -27,7 +27,7 @@ export function useCoachAppointments({ startDate, endDate }: UseCoachAppointment
     queryFn: async (): Promise<CalendarAppointment[]> => {
       if (!user?.id) return [];
 
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("appointments")
         .select("id, title, type, date, time")
         .eq("coach_id", user.id)
