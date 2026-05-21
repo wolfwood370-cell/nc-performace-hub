@@ -681,7 +681,7 @@ export function CalendarGrid({
       </div>
 
       {/* Calendar Content */}
-      <div className="flex-1 overflow-hidden pt-4">
+      <div className="flex-1 overflow-auto pt-4">
         {view === "month" && (
           <>
             {/* Weekday Headers — Aura, LUN..DOM uppercase */}
