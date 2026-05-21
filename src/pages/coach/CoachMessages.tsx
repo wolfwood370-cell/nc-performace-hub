@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useChatRooms, ChatRoom } from "@/hooks/useChatRooms";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 export default function CoachMessages() {
   const navigate = useNavigate();
@@ -121,40 +122,59 @@ export default function CoachMessages() {
 
   return (
     <CoachLayout title="Centro Comunicazioni" subtitle="Messaggi e contesto atleti">
-      <div className="animate-fade-in h-[calc(100vh-10rem)] min-h-[500px]">
-        {/* 3-Pane Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 h-full rounded-lg overflow-hidden border bg-card">
-          {/* Left Pane: Room List (25% on desktop) */}
-          <div className={`lg:col-span-3 h-full ${isMobile && !showRoomList ? "hidden" : ""}`}>
-            <RoomList
-              rooms={rooms}
-              isLoading={isLoading}
-              selectedRoomId={selectedRoom?.id || null}
-              onSelectRoom={handleSelectRoom}
-              onNewChat={() => setNewChatOpen(true)}
-            />
-          </div>
+      {/* ── Aura 3-Column Workspace ──
+          Full-screen viewport bounds (DESIGN.md). The CoachLayout already
+          provides bg-background (Aura surface #f5faff); here we own the
+          horizontal flex split. Each column is rounded-3xl on its own
+          surface card so the gaps reveal the canvas tint underneath. */}
+      <div className="animate-fade-in h-[calc(100vh-2rem)] flex overflow-hidden p-4 gap-4 bg-surface font-sans">
+        {/* ═══ Column 1 — Left Directory (w-80, ~3/12) ═══ */}
+        <aside
+          className={cn(
+            "w-80 shrink-0 h-full overflow-hidden flex flex-col",
+            "rounded-3xl bg-surface-container-lowest border border-outline-variant/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)]",
+            isMobile && !showRoomList && "hidden",
+          )}
+        >
+          <RoomList
+            rooms={rooms}
+            isLoading={isLoading}
+            selectedRoomId={selectedRoom?.id || null}
+            onSelectRoom={handleSelectRoom}
+            onNewChat={() => setNewChatOpen(true)}
+          />
+        </aside>
 
-          {/* Center Pane: Chat Interface (50% on desktop) */}
-          <div className={`lg:col-span-5 h-full ${isMobile && showRoomList ? "hidden" : ""}`}>
-            <ChatPane
-              room={selectedRoom}
-              onBack={handleBack}
-              onToggleContext={handleToggleContext}
-              showBackButton={isMobile}
-              alertContext={alertContext}
-            />
-          </div>
+        {/* ═══ Column 2 — Chat (flex-1) ═══ */}
+        <main
+          className={cn(
+            "flex-1 h-full min-w-0 overflow-hidden flex flex-col",
+            "rounded-3xl bg-surface-container-lowest border border-outline-variant/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)]",
+            isMobile && showRoomList && "hidden",
+          )}
+        >
+          <ChatPane
+            room={selectedRoom}
+            onBack={handleBack}
+            onToggleContext={handleToggleContext}
+            showBackButton={isMobile}
+            alertContext={alertContext}
+          />
+        </main>
 
-          {/* Right Pane: Context Sidebar (25% on desktop) */}
-          <div className="lg:col-span-4 h-full hidden lg:block">
-            <AthleteContextPane
-              room={selectedRoom}
-              isOpen={true}
-              onClose={() => setShowContext(false)}
-            />
-          </div>
-        </div>
+        {/* ═══ Column 3 — Athlete Context (w-80, desktop-only) ═══ */}
+        <aside
+          className={cn(
+            "w-80 shrink-0 h-full overflow-hidden flex-col hidden lg:flex",
+            "rounded-3xl bg-surface-container-lowest border border-outline-variant/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)]",
+          )}
+        >
+          <AthleteContextPane
+            room={selectedRoom}
+            isOpen={true}
+            onClose={() => setShowContext(false)}
+          />
+        </aside>
 
         {/* Mobile Context Overlay */}
         {isMobile && (
