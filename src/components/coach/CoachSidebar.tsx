@@ -359,7 +359,7 @@ function SidebarNavGroup({
     <div>
       {!isCollapsed && (
         <p
-          className="px-4 mb-2 text-xs font-semibold uppercase tracking-wider text-on-surface-variant/70"
+          className="px-4 mb-2 text-xs font-semibold uppercase tracking-wider text-slate-600"
           aria-label={label}
         >
           {label}
@@ -416,7 +416,7 @@ function SidebarLinkRow({
 
   const inactiveClasses = "text-on-surface-variant hover:text-on-surface";
   const activeClasses =
-    "bg-primary-container text-on-primary shadow-[0_4px_14px_rgb(0_62_98_/_0.20)]";
+    "bg-primary-container text-white shadow-[0_4px_14px_rgb(0_62_98_/_0.20)]";
 
   const inner = (
     <NavLink to={to} end={end} className={baseClasses} activeClassName={activeClasses}>
