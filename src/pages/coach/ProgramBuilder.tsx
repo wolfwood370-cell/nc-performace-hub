@@ -528,6 +528,15 @@ export default function ProgramBuilder() {
     });
   }, [duplicateWeek, previousWeek, selectedWeek]);
 
+  // Aggregate metrics — only deload count is still used here (in the
+  // wave visualizer header). Block totals moved into ProgressionInspector.
+  // Must be declared BEFORE the early return below to keep hook count stable
+  // across the null-block → ready-block transition.
+  const deloadCount = useMemo(
+    () => (block?.weeks ?? []).filter((w) => w.is_deload).length,
+    [block?.weeks],
+  );
+
   // -------------------------------------------------------------------------
   // Handlers
   // -------------------------------------------------------------------------
@@ -549,10 +558,6 @@ export default function ProgramBuilder() {
       </CoachLayout>
     );
   }
-
-  // Aggregate metrics — only deload count is still used here (in the
-  // wave visualizer header). Block totals moved into ProgressionInspector.
-  const deloadCount = useMemo(() => block.weeks.filter((w) => w.is_deload).length, [block.weeks]);
 
   return (
     <CoachLayout title="Program Builder" subtitle="Design periodized training blocks">
