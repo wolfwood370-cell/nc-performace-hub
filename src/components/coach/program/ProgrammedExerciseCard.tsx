@@ -89,17 +89,22 @@ const CompactCell = memo(function CompactCell({
         // Re-key when the upstream value changes so the uncontrolled input
         // syncs (e.g. after week duplication overwrites this set).
         key={String(value ?? "")}
+        // Aura form input: rounded-xl (16px), outline-variant border,
+        // primary focus + ambient outer glow. Container is bg-surface-
+        // container-lowest so the field reads as a "tray" against the
+        // surrounding surface-container-low body.
         className={cn(
-          "w-full h-7 px-1.5 text-xs tabular-nums text-center bg-transparent",
-          "rounded-sm border border-transparent",
-          "hover:border-border/70 hover:bg-muted/30",
-          "focus:outline-none focus:border-primary/60 focus:bg-background focus:ring-1 focus:ring-primary/20",
-          "transition-colors",
-          suffix && "pr-3.5",
+          "w-full h-8 px-2 text-xs tabular-nums text-center font-semibold",
+          "rounded-xl border border-outline-variant bg-surface-container-lowest text-on-surface",
+          "placeholder:text-on-surface-variant/60",
+          "transition-[box-shadow,border-color] duration-200",
+          "hover:border-primary/40",
+          "focus:outline-none focus:border-primary focus:shadow-[0_0_0_3px_rgb(0_86_133_/_0.12)]",
+          suffix && "pr-5",
         )}
       />
       {suffix && (
-        <span className="absolute right-1 text-4xs text-muted-foreground pointer-events-none">
+        <span className="absolute right-2 text-3xs text-on-surface-variant pointer-events-none font-bold">
           {suffix}
         </span>
       )}
@@ -176,18 +181,20 @@ export const ProgrammedExerciseCard = memo(function ProgrammedExerciseCard({
   return (
     <div
       className={cn(
-        "group/card rounded-md border bg-card",
-        "shadow-sm transition-colors",
+        // Aura compact card: rounded-2xl, surface-container-lowest,
+        // soft 1px outline-variant, ambient shadow on hover.
+        "group/card rounded-2xl border bg-surface-container-lowest",
+        "shadow-sm transition-all hover:shadow-[0_4px_14px_rgb(0,0,0,0.04)]",
         isHighRisk
-          ? "border-destructive/80 hover:border-destructive"
-          : "border-border/60 hover:border-border",
+          ? "border-destructive/40 hover:border-destructive/60"
+          : "border-outline-variant/20 hover:border-outline-variant/40",
       )}
     >
       {/* Header — exercise name + remove */}
       <div
         className={cn(
-          "flex items-center justify-between gap-1 px-2 py-1.5 border-b",
-          isHighRisk ? "border-destructive/40 bg-destructive/5" : "border-border/50",
+          "flex items-center justify-between gap-1 px-3 py-2 border-b",
+          isHighRisk ? "border-destructive/30 bg-destructive/5" : "border-outline-variant/15",
         )}
       >
         <div className="flex min-w-0 items-center gap-1.5">
@@ -246,13 +253,13 @@ export const ProgrammedExerciseCard = memo(function ProgrammedExerciseCard({
          Columns: # | Reps | RPE/RIR | %1RM
          Using a CSS grid keeps headers and rows perfectly aligned without
          <table>'s padding overhead.                                          */}
-      <div className="px-1.5 py-1">
+      <div className="px-2 py-2 space-y-1">
         {/* Header row */}
         <div
           className={cn(
-            "grid grid-cols-[1.5rem_1fr_1fr_1fr] items-center gap-1",
-            "px-1 pb-0.5 mb-0.5 border-b border-border/40",
-            "text-4xs font-medium text-muted-foreground uppercase tracking-wider",
+            "grid grid-cols-[1.5rem_1fr_1fr_1fr] items-center gap-1.5",
+            "px-1 pb-1 mb-0.5 border-b border-outline-variant/20",
+            "text-3xs font-bold text-on-surface-variant uppercase tracking-wider",
           )}
         >
           <span className="text-center">Set</span>
@@ -269,11 +276,11 @@ export const ProgrammedExerciseCard = memo(function ProgrammedExerciseCard({
           <div
             key={set.id}
             className={cn(
-              "grid grid-cols-[1.5rem_1fr_1fr_1fr] items-center gap-1",
-              "px-1 py-0.5 rounded-sm hover:bg-muted/20",
+              "grid grid-cols-[1.5rem_1fr_1fr_1fr] items-center gap-1.5",
+              "px-1 py-1 rounded-xl hover:bg-surface-container-low/50 transition-colors",
             )}
           >
-            <span className="text-3xs text-muted-foreground text-center tabular-nums">
+            <span className="text-xs font-bold text-on-surface-variant text-center tabular-nums">
               {set.set_number}
             </span>
 
@@ -333,19 +340,19 @@ export const ProgrammedExerciseCard = memo(function ProgrammedExerciseCard({
           </div>
         ))}
 
-        {/* Add set */}
+        {/* Add set — pill action */}
         <Button
           type="button"
           variant="ghost"
           size="sm"
           onClick={() => addSetToExercise(weekId, sessionId, exercise.id)}
           className={cn(
-            "w-full h-6 mt-0.5 text-3xs text-muted-foreground",
-            "hover:text-foreground hover:bg-muted/40",
+            "w-full h-7 mt-1 text-3xs font-bold text-on-surface-variant",
+            "hover:text-on-surface hover:bg-primary-container/10",
           )}
         >
           <Plus className="h-3 w-3 mr-1" />
-          Add Set
+          Aggiungi Serie
         </Button>
       </div>
     </div>
