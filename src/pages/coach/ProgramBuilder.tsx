@@ -46,6 +46,11 @@ import {
   Copy,
   Send,
   User,
+  BookmarkPlus,
+  Activity,
+  Flame,
+  Gauge,
+  TrendingUp,
 } from "lucide-react";
 import {
   Select,
@@ -547,186 +552,409 @@ export default function ProgramBuilder() {
     );
   }
 
+  // Aggregate metrics for the Progression Inspector sidebar.
+  const totalExercises = useMemo(
+    () =>
+      block.weeks.reduce(
+        (sum, w) => sum + w.sessions.reduce((s, sess) => s + sess.exercises.length, 0),
+        0,
+      ),
+    [block.weeks],
+  );
+  const totalSets = useMemo(
+    () =>
+      block.weeks.reduce(
+        (sum, w) =>
+          sum +
+          w.sessions.reduce(
+            (s, sess) => s + sess.exercises.reduce((es, e) => es + e.sets.length, 0),
+            0,
+          ),
+        0,
+      ),
+    [block.weeks],
+  );
+  const deloadCount = useMemo(() => block.weeks.filter((w) => w.is_deload).length, [block.weeks]);
+
   return (
     <CoachLayout title="Program Builder" subtitle="Design periodized training blocks">
-      <div className="flex h-[calc(100vh-9rem)] flex-col gap-4">
-        {/* ───────────────────────────────────────────────────────────────
-            Block header — name, goal, structural meta. Compact: two rows
-            max, tabular numerals so 4 wks / 16 sessions read clean.
-           ─────────────────────────────────────────────────────────────── */}
-        <div className="flex items-center justify-between gap-4 px-1">
-          <div className="min-w-0">
-            <h1 className="truncate text-xl font-bold leading-tight">{block.name}</h1>
-            <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <Target className="h-3 w-3" />
-                {block.goal}
-              </span>
-              <span className="flex items-center gap-1">
-                <Layers className="h-3 w-3" />
-                <span className="tabular-nums">{block.weeks.length}</span> weeks
-              </span>
-              <span className="flex items-center gap-1">
-                <Calendar className="h-3 w-3" />
-                Starts {block.start_date}
-              </span>
-            </div>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            {/* Athlete assignment selector */}
-            <div className="flex items-center gap-1.5">
-              <User className="h-3.5 w-3.5 text-muted-foreground" />
-              <Select
-                value={block.athlete_id || undefined}
-                onValueChange={handleAssignAthlete}
-                disabled={athletesLoading}
-              >
-                <SelectTrigger className="h-9 w-[200px] text-xs">
-                  <SelectValue
-                    placeholder={athletesLoading ? "Loading athletes…" : "Assign athlete…"}
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {athletesRoster.length === 0 ? (
-                    <div className="px-2 py-1.5 text-xs text-muted-foreground">
-                      No athletes yet.
-                    </div>
-                  ) : (
-                    athletesRoster.map((a) => (
-                      <SelectItem key={a.id} value={a.id} className="text-xs">
-                        {a.full_name ?? "Atleta"}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Save draft */}
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={handleSave}
-              disabled={isSaving}
-              className="gap-2"
-            >
-              {isSaving ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Save className="h-4 w-4" />
-              )}
-              {isSaving ? "Saving…" : "Save Draft"}
-            </Button>
-
-            {/* Publish */}
-            <Button
-              type="button"
-              size="sm"
-              onClick={handlePublish}
-              disabled={isSaving || !block.athlete_id}
-              className="gap-2"
-              title={
-                !block.athlete_id ? "Assign an athlete before publishing" : "Publish this program"
-              }
-            >
-              <Send className="h-4 w-4" />
-              Publish
-            </Button>
-          </div>
-        </div>
-
-        {/* ───────────────────────────────────────────────────────────────
-            Macro-Timeline — horizontal strip of week cards. Uses Shadcn
-            ScrollArea so the scrollbar matches the rest of the app and
-            keyboard scrolling works out of the box.
-           ─────────────────────────────────────────────────────────────── */}
-        <section
-          aria-label="Macro-cycle timeline"
-          className="rounded-lg border border-border/60 bg-card"
-        >
-          <div className="flex items-center justify-between px-3 py-2">
-            <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Macro-Timeline
-            </h2>
-            <span className="text-3xs text-muted-foreground">{block.weeks.length} microcycles</span>
-          </div>
-          <Separator className="bg-border/40" />
-          <ScrollArea className="w-full">
-            <div className="flex gap-2 p-3">
-              {block.weeks.map((week) => (
-                <WeekTimelineCard
-                  key={week.id}
-                  week={week}
-                  isActive={week.id === selectedWeekId}
-                  onSelect={() => setSelectedWeekId(week.id)}
-                />
-              ))}
-            </div>
-            <ScrollBar orientation="horizontal" />
-          </ScrollArea>
-        </section>
-
-        {/* ───────────────────────────────────────────────────────────────
-            Week Grid — vertical session columns side-by-side. Wraps in a
-            second horizontal ScrollArea so 6+ session weeks remain usable
-            on a 13" laptop without breaking the column rhythm.
-           ─────────────────────────────────────────────────────────────── */}
-        <section
-          aria-label={`Week ${selectedWeek?.order ?? ""} sessions`}
-          className="flex min-h-0 flex-1 flex-col rounded-lg border border-border/60 bg-card"
-        >
-          <div className="flex items-center justify-between gap-3 px-3 py-2">
-            <div className="flex items-baseline gap-2">
-              <h2 className="text-sm font-semibold">Week {selectedWeek?.order ?? "—"}</h2>
-              {selectedWeek && (
-                <span className="text-xs text-muted-foreground">
-                  · {weekPhaseLabel(selectedWeek)}
+      {/* ═══ Outer split shell — Aura full-screen viewport ═══
+          DESIGN.md spec: h-[calc(100vh-2rem)] flex overflow-hidden p-4
+          gap-6 bg-surface. The page hosts (1) a flexible main canvas with
+          the macro-timeline + sessions and (2) a fixed-width Progression
+          Inspector sidebar on the right. */}
+      <div className="h-[calc(100vh-2rem)] flex overflow-hidden p-4 gap-6 bg-surface font-sans">
+        {/* ═══ MAIN COLUMN — header + timeline + week grid ═══ */}
+        <main className="flex-1 flex flex-col min-w-0 overflow-hidden rounded-3xl bg-surface-container-lowest border border-outline-variant/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+          {/* ── Sticky Header (Aura sub-bar) ── */}
+          <header className="sticky top-0 z-10 flex-shrink-0 px-6 py-5 border-b border-outline-variant/15 bg-surface-container-lowest/95 backdrop-blur-md">
+            {/* Row 1 — Template badge + global actions */}
+            <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+              <div className="min-w-0 flex-1">
+                {/* Macrocycle title badge — pill chip with the active block name */}
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-container/15 text-primary px-3 py-1 text-xs font-bold mb-2">
+                  <Layers className="h-3.5 w-3.5" />
+                  Template: {block.name}
                 </span>
-              )}
-            </div>
-            <div className="flex items-center gap-3">
-              {previousWeek && selectedWeek && (
+                <h1 className="font-display text-headline-md font-bold text-on-surface tracking-tight truncate">
+                  {block.name}
+                </h1>
+                <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-on-surface-variant">
+                  <span className="inline-flex items-center gap-1">
+                    <Target className="h-3 w-3" />
+                    {block.goal}
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <Layers className="h-3 w-3" />
+                    <span className="tabular-nums">{block.weeks.length}</span> settimane
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <Calendar className="h-3 w-3" />
+                    Inizio {block.start_date}
+                  </span>
+                </div>
+              </div>
+
+              {/* Pill action controls (Aura rounded-full) */}
+              <div className="flex flex-wrap items-center gap-2 flex-shrink-0">
+                {/* Athlete assignment */}
+                <Select
+                  value={block.athlete_id || undefined}
+                  onValueChange={handleAssignAthlete}
+                  disabled={athletesLoading}
+                >
+                  <SelectTrigger className="h-9 w-[200px] text-xs gap-2">
+                    <User className="h-3.5 w-3.5 text-on-surface-variant" />
+                    <SelectValue
+                      placeholder={athletesLoading ? "Caricamento…" : "Assegna atleta…"}
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {athletesRoster.length === 0 ? (
+                      <div className="px-2 py-1.5 text-xs text-on-surface-variant">
+                        Nessun atleta.
+                      </div>
+                    ) : (
+                      athletesRoster.map((a) => (
+                        <SelectItem key={a.id} value={a.id} className="text-xs">
+                          {a.full_name ?? "Atleta"}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+
+                {/* Clona Settimana — pill outline, replicates previous week into current */}
                 <Button
                   type="button"
                   size="sm"
                   variant="outline"
                   onClick={handleCopyFromPrevious}
-                  className="h-7 gap-1.5 text-xs"
-                  title={`Replace Week ${selectedWeek.order} with a copy of Week ${previousWeek.order}`}
+                  disabled={!previousWeek || !selectedWeek}
+                  className="gap-2"
+                  title={
+                    !previousWeek
+                      ? "Disponibile dalla seconda settimana"
+                      : `Sostituisce Settimana ${selectedWeek?.order} con copia di Settimana ${previousWeek.order}`
+                  }
                 >
-                  <Copy className="h-3.5 w-3.5" />
-                  Copy from previous week
+                  <Copy className="h-4 w-4" />
+                  Clona Settimana
                 </Button>
-              )}
-              <span className="text-3xs text-muted-foreground">
-                {selectedWeek?.sessions.length ?? 0} sessions
+
+                {/* Salva nei Template — pill outline, placeholder until template lib lands */}
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() =>
+                    toast.info("Libreria template in arrivo", {
+                      description: "Salverà il blocco corrente come template riutilizzabile.",
+                    })
+                  }
+                  className="gap-2"
+                >
+                  <BookmarkPlus className="h-4 w-4" />
+                  Salva nei Template
+                </Button>
+
+                {/* Save draft (primary pill — workhorse) */}
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={handleSave}
+                  disabled={isSaving}
+                  className="gap-2"
+                >
+                  {isSaving ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4" />
+                  )}
+                  {isSaving ? "Salvataggio…" : "Salva Bozza"}
+                </Button>
+
+                {/* Publish (primary CTA) */}
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={handlePublish}
+                  disabled={isSaving || !block.athlete_id}
+                  className="gap-2"
+                  title={
+                    !block.athlete_id
+                      ? "Assegna un atleta prima di pubblicare"
+                      : "Pubblica il programma"
+                  }
+                >
+                  <Send className="h-4 w-4" />
+                  Pubblica
+                </Button>
+              </div>
+            </div>
+
+            {/* ── Volume/Intensity wave visualizer ──
+                Compact horizontal bar that tracks Accumulo vs Deload steps
+                across the macrocycle. Each week renders a vertical column
+                whose height represents prescribed exercise count (proxy
+                for volume) and whose opacity reflects the wave position
+                (deload = lower alpha, peak intensification = stronger). */}
+            <section aria-label="Andamento volume/intensità" className="space-y-1.5">
+              <div className="flex items-center justify-between text-xs text-on-surface-variant">
+                <span className="inline-flex items-center gap-1.5 font-bold uppercase tracking-wider text-3xs">
+                  <Activity className="h-3 w-3 text-primary" />
+                  Onda Volume · Intensità
+                </span>
+                <span className="text-3xs">
+                  {block.weeks.length} microcicli · {deloadCount} deload
+                </span>
+              </div>
+              <VolumeIntensityWave
+                weeks={block.weeks}
+                selectedWeekId={selectedWeekId}
+                onSelect={setSelectedWeekId}
+              />
+            </section>
+          </header>
+
+          {/* ── Macro-Timeline — horizontal strip of week cards ── */}
+          <section
+            aria-label="Macro-cycle timeline"
+            className="flex-shrink-0 border-b border-outline-variant/15"
+          >
+            <ScrollArea className="w-full">
+              <div className="flex gap-2 px-6 py-3">
+                {block.weeks.map((week) => (
+                  <WeekTimelineCard
+                    key={week.id}
+                    week={week}
+                    isActive={week.id === selectedWeekId}
+                    onSelect={() => setSelectedWeekId(week.id)}
+                  />
+                ))}
+              </div>
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
+          </section>
+
+          {/* ── Week Grid — vertical session columns (horizontal scroll) ── */}
+          <section
+            aria-label={`Settimana ${selectedWeek?.order ?? ""} · sessioni`}
+            className="flex-1 min-h-0 flex flex-col"
+          >
+            <div className="flex items-center justify-between gap-3 px-6 py-3 border-b border-outline-variant/10">
+              <div className="flex items-baseline gap-2">
+                <h2 className="font-display text-label-md font-bold text-on-surface">
+                  Settimana {selectedWeek?.order ?? "—"}
+                </h2>
+                {selectedWeek && (
+                  <span className="text-xs text-on-surface-variant">
+                    · {weekPhaseLabel(selectedWeek)}
+                  </span>
+                )}
+              </div>
+              <span className="text-3xs text-on-surface-variant tabular-nums">
+                {selectedWeek?.sessions.length ?? 0} sessioni
               </span>
             </div>
-          </div>
-          <Separator className="bg-border/40" />
 
-          <ScrollArea className="flex-1">
-            <div className="flex h-full min-h-[400px] gap-3 p-3">
-              {selectedWeek?.sessions.length ? (
-                selectedWeek.sessions.map((session) => (
-                  <SessionColumn
-                    key={session.id}
-                    weekId={selectedWeek.id}
-                    session={session}
-                    checkExercise={assignedAthleteId ? checkExercise : undefined}
-                  />
-                ))
-              ) : (
-                <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
-                  No sessions in this week.
+            <ScrollArea className="flex-1 overflow-x-auto">
+              <div className="flex h-full min-h-[400px] gap-3 p-6">
+                {selectedWeek?.sessions.length ? (
+                  selectedWeek.sessions.map((session) => (
+                    <SessionColumn
+                      key={session.id}
+                      weekId={selectedWeek.id}
+                      session={session}
+                      checkExercise={assignedAthleteId ? checkExercise : undefined}
+                    />
+                  ))
+                ) : (
+                  <div className="flex flex-1 items-center justify-center text-sm text-on-surface-variant">
+                    Nessuna sessione in questa settimana.
+                  </div>
+                )}
+              </div>
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
+          </section>
+        </main>
+
+        {/* ═══ RIGHT SIDEBAR — Progression Inspector ═══ */}
+        <aside className="w-80 shrink-0 flex flex-col overflow-hidden rounded-3xl bg-surface-container-lowest border border-outline-variant/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+          <header className="flex-shrink-0 px-5 py-5 border-b border-outline-variant/15">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-container/15 text-primary px-2.5 py-0.5 text-3xs font-bold uppercase tracking-wider mb-2">
+              <TrendingUp className="h-3 w-3" />
+              Progression Inspector
+            </span>
+            <h3 className="font-display text-label-md font-bold text-on-surface">
+              {selectedWeek
+                ? `Settimana ${selectedWeek.order} · ${weekPhaseLabel(selectedWeek)}`
+                : "Nessuna settimana selezionata"}
+            </h3>
+          </header>
+
+          <ScrollArea className="flex-1 custom-scrollbar">
+            <div className="p-5 space-y-4">
+              {/* Block aggregates */}
+              <div className="rounded-2xl bg-surface-container-low p-4">
+                <p className="text-3xs font-bold uppercase tracking-wider text-on-surface-variant mb-3 inline-flex items-center gap-1.5">
+                  <Layers className="h-3 w-3 text-primary" />
+                  Totali Blocco
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <InspectorStat label="Settimane" value={block.weeks.length} />
+                  <InspectorStat label="Deload" value={deloadCount} />
+                  <InspectorStat label="Esercizi" value={totalExercises} />
+                  <InspectorStat label="Serie totali" value={totalSets} />
+                </div>
+              </div>
+
+              {/* Selected week breakdown */}
+              {selectedWeek && (
+                <div className="rounded-2xl bg-surface-container-low p-4">
+                  <p className="text-3xs font-bold uppercase tracking-wider text-on-surface-variant mb-3 inline-flex items-center gap-1.5">
+                    <Gauge className="h-3 w-3 text-primary" />
+                    Settimana Corrente
+                  </p>
+                  <ul className="space-y-2">
+                    {selectedWeek.sessions.map((session) => {
+                      const sessionSets = session.exercises.reduce((n, e) => n + e.sets.length, 0);
+                      return (
+                        <li
+                          key={session.id}
+                          className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-surface-container-lowest border border-outline-variant/15"
+                        >
+                          <div className="min-w-0">
+                            <p className="text-sm font-bold text-on-surface truncate">
+                              {session.name}
+                            </p>
+                            {session.focus && (
+                              <p className="text-3xs text-on-surface-variant uppercase tracking-wider truncate">
+                                {session.focus}
+                              </p>
+                            )}
+                          </div>
+                          <div className="text-right shrink-0">
+                            <p className="text-xs font-bold tabular-nums text-on-surface">
+                              {session.exercises.length}
+                            </p>
+                            <p className="text-3xs text-on-surface-variant tabular-nums">
+                              {sessionSets} serie
+                            </p>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )}
+
+              {/* Phase intensity hint */}
+              {selectedWeek && (
+                <div className="rounded-2xl bg-surface-container-low p-4">
+                  <p className="text-3xs font-bold uppercase tracking-wider text-on-surface-variant mb-2 inline-flex items-center gap-1.5">
+                    <Flame className="h-3 w-3 text-primary" />
+                    Profilo di Fase
+                  </p>
+                  <p className="text-sm text-on-surface leading-relaxed">
+                    {selectedWeek.is_deload
+                      ? "Settimana di deload — riduci volume del 40–50%, mantieni intensità per preservare gli adattamenti neurali."
+                      : selectedWeek.order === 1
+                        ? "Fase di accumulo — volume alto, intensità moderata. Costruisci capacità di lavoro."
+                        : selectedWeek.order === 2
+                          ? "Fase di intensificazione — riduzione volume, aumento intensità. Mantieni qualità."
+                          : "Fase di realizzazione — picco di intensità per espressione massima della forza."}
+                  </p>
                 </div>
               )}
             </div>
-            <ScrollBar orientation="horizontal" />
           </ScrollArea>
-        </section>
+        </aside>
       </div>
     </CoachLayout>
+  );
+}
+
+// ===========================================================================
+// VolumeIntensityWave — compact horizontal sparkline
+// ===========================================================================
+function VolumeIntensityWave({
+  weeks,
+  selectedWeekId,
+  onSelect,
+}: {
+  weeks: Microcycle[];
+  selectedWeekId: UUID | null;
+  onSelect: (id: UUID) => void;
+}) {
+  // Volume proxy: total prescribed exercises across the week. The maximum
+  // across the block normalises the bar height so the chart fits the row.
+  const counts = weeks.map((w) => w.sessions.reduce((n, s) => n + s.exercises.length, 0));
+  const max = Math.max(1, ...counts);
+
+  return (
+    <div className="flex items-end gap-1 h-12">
+      {weeks.map((week, idx) => {
+        const ratio = counts[idx] / max;
+        // Alpha-calibrated opacity: deload weeks fade out (40%), regular
+        // weeks gradient from 60% → 100% based on relative volume.
+        const opacity = week.is_deload ? 0.4 : Math.max(0.55, ratio);
+        const heightPct = Math.max(15, ratio * 100);
+        const isActive = week.id === selectedWeekId;
+        return (
+          <button
+            key={week.id}
+            type="button"
+            onClick={() => onSelect(week.id)}
+            aria-label={`Settimana ${week.order} · ${weekPhaseLabel(week)}`}
+            aria-pressed={isActive}
+            title={`Settimana ${week.order} · ${counts[idx]} esercizi · ${weekPhaseLabel(week)}`}
+            className={cn(
+              "flex-1 min-w-[16px] rounded-t-md transition-all hover:scale-105",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+              week.is_deload ? "bg-sky-500" : "bg-primary",
+              isActive && "ring-2 ring-primary ring-offset-1 ring-offset-surface-container-lowest",
+            )}
+            style={{ height: `${heightPct}%`, opacity }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+// ===========================================================================
+// InspectorStat — small label/value pair for the right sidebar
+// ===========================================================================
+function InspectorStat({ label, value }: { label: string; value: number | string }) {
+  return (
+    <div className="rounded-xl bg-surface-container-lowest border border-outline-variant/15 p-2.5">
+      <p className="text-3xs text-on-surface-variant uppercase tracking-wider mb-0.5">{label}</p>
+      <p className="font-display text-lg font-bold text-on-surface tabular-nums leading-none">
+        {value}
+      </p>
+    </div>
   );
 }
