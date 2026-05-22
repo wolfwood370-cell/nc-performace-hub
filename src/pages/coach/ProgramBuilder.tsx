@@ -48,9 +48,6 @@ import {
   User,
   BookmarkPlus,
   Activity,
-  Flame,
-  Gauge,
-  TrendingUp,
 } from "lucide-react";
 import {
   Select,
@@ -66,6 +63,7 @@ import { toast } from "sonner";
 import { useAdvancedProgramStore } from "@/stores/useAdvancedProgramStore";
 import { ExerciseLibraryDrawer } from "@/components/coach/program/ExerciseLibraryDrawer";
 import { ProgrammedExerciseCard } from "@/components/coach/program/ProgrammedExerciseCard";
+import { ProgressionInspector } from "@/components/coach/program/ProgressionInspector";
 import { useSaveProgramBlock, SaveProgramBlockError } from "@/hooks/useSaveProgramBlock";
 import { useAuth } from "@/hooks/useAuth";
 import { useAthleteRiskAnalysis } from "@/hooks/useAthleteRiskAnalysis";
@@ -552,28 +550,8 @@ export default function ProgramBuilder() {
     );
   }
 
-  // Aggregate metrics for the Progression Inspector sidebar.
-  const totalExercises = useMemo(
-    () =>
-      block.weeks.reduce(
-        (sum, w) => sum + w.sessions.reduce((s, sess) => s + sess.exercises.length, 0),
-        0,
-      ),
-    [block.weeks],
-  );
-  const totalSets = useMemo(
-    () =>
-      block.weeks.reduce(
-        (sum, w) =>
-          sum +
-          w.sessions.reduce(
-            (s, sess) => s + sess.exercises.reduce((es, e) => es + e.sets.length, 0),
-            0,
-          ),
-        0,
-      ),
-    [block.weeks],
-  );
+  // Aggregate metrics — only deload count is still used here (in the
+  // wave visualizer header). Block totals moved into ProgressionInspector.
   const deloadCount = useMemo(() => block.weeks.filter((w) => w.is_deload).length, [block.weeks]);
 
   return (
@@ -801,97 +779,11 @@ export default function ProgramBuilder() {
           </section>
         </main>
 
-        {/* ═══ RIGHT SIDEBAR — Progression Inspector ═══ */}
-        <aside className="w-80 shrink-0 flex flex-col overflow-hidden rounded-3xl bg-surface-container-lowest border border-outline-variant/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
-          <header className="flex-shrink-0 px-5 py-5 border-b border-outline-variant/15">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-container/15 text-primary px-2.5 py-0.5 text-3xs font-bold uppercase tracking-wider mb-2">
-              <TrendingUp className="h-3 w-3" />
-              Progression Inspector
-            </span>
-            <h3 className="font-display text-label-md font-bold text-on-surface">
-              {selectedWeek
-                ? `Settimana ${selectedWeek.order} · ${weekPhaseLabel(selectedWeek)}`
-                : "Nessuna settimana selezionata"}
-            </h3>
-          </header>
-
-          <ScrollArea className="flex-1 custom-scrollbar">
-            <div className="p-5 space-y-4">
-              {/* Block aggregates */}
-              <div className="rounded-2xl bg-surface-container-low p-4">
-                <p className="text-3xs font-bold uppercase tracking-wider text-on-surface-variant mb-3 inline-flex items-center gap-1.5">
-                  <Layers className="h-3 w-3 text-primary" />
-                  Totali Blocco
-                </p>
-                <div className="grid grid-cols-2 gap-3">
-                  <InspectorStat label="Settimane" value={block.weeks.length} />
-                  <InspectorStat label="Deload" value={deloadCount} />
-                  <InspectorStat label="Esercizi" value={totalExercises} />
-                  <InspectorStat label="Serie totali" value={totalSets} />
-                </div>
-              </div>
-
-              {/* Selected week breakdown */}
-              {selectedWeek && (
-                <div className="rounded-2xl bg-surface-container-low p-4">
-                  <p className="text-3xs font-bold uppercase tracking-wider text-on-surface-variant mb-3 inline-flex items-center gap-1.5">
-                    <Gauge className="h-3 w-3 text-primary" />
-                    Settimana Corrente
-                  </p>
-                  <ul className="space-y-2">
-                    {selectedWeek.sessions.map((session) => {
-                      const sessionSets = session.exercises.reduce((n, e) => n + e.sets.length, 0);
-                      return (
-                        <li
-                          key={session.id}
-                          className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-surface-container-lowest border border-outline-variant/15"
-                        >
-                          <div className="min-w-0">
-                            <p className="text-sm font-bold text-on-surface truncate">
-                              {session.name}
-                            </p>
-                            {session.focus && (
-                              <p className="text-3xs text-on-surface-variant uppercase tracking-wider truncate">
-                                {session.focus}
-                              </p>
-                            )}
-                          </div>
-                          <div className="text-right shrink-0">
-                            <p className="text-xs font-bold tabular-nums text-on-surface">
-                              {session.exercises.length}
-                            </p>
-                            <p className="text-3xs text-on-surface-variant tabular-nums">
-                              {sessionSets} serie
-                            </p>
-                          </div>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-              )}
-
-              {/* Phase intensity hint */}
-              {selectedWeek && (
-                <div className="rounded-2xl bg-surface-container-low p-4">
-                  <p className="text-3xs font-bold uppercase tracking-wider text-on-surface-variant mb-2 inline-flex items-center gap-1.5">
-                    <Flame className="h-3 w-3 text-primary" />
-                    Profilo di Fase
-                  </p>
-                  <p className="text-sm text-on-surface leading-relaxed">
-                    {selectedWeek.is_deload
-                      ? "Settimana di deload — riduci volume del 40–50%, mantieni intensità per preservare gli adattamenti neurali."
-                      : selectedWeek.order === 1
-                        ? "Fase di accumulo — volume alto, intensità moderata. Costruisci capacità di lavoro."
-                        : selectedWeek.order === 2
-                          ? "Fase di intensificazione — riduzione volume, aumento intensità. Mantieni qualità."
-                          : "Fase di realizzazione — picco di intensità per espressione massima della forza."}
-                  </p>
-                </div>
-              )}
-            </div>
-          </ScrollArea>
-        </aside>
+        {/* ═══ RIGHT SIDEBAR — Progression Inspector ═══
+            Wired to the Zustand `selectedContext` (set by clicking an
+            exercise card in the day grid). The component handles its own
+            surface, scroll, and CTA — we just place it. */}
+        <ProgressionInspector />
       </div>
     </CoachLayout>
   );
@@ -941,20 +833,6 @@ function VolumeIntensityWave({
           />
         );
       })}
-    </div>
-  );
-}
-
-// ===========================================================================
-// InspectorStat — small label/value pair for the right sidebar
-// ===========================================================================
-function InspectorStat({ label, value }: { label: string; value: number | string }) {
-  return (
-    <div className="rounded-xl bg-surface-container-lowest border border-outline-variant/15 p-2.5">
-      <p className="text-3xs text-on-surface-variant uppercase tracking-wider mb-0.5">{label}</p>
-      <p className="font-display text-lg font-bold text-on-surface tabular-nums leading-none">
-        {value}
-      </p>
     </div>
   );
 }

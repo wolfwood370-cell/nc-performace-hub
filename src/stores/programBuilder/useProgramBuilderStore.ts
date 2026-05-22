@@ -1,5 +1,5 @@
-import { create } from 'zustand';
-import { immer } from 'zustand/middleware/immer';
+import { create } from "zustand";
+import { immer } from "zustand/middleware/immer";
 import type {
   ProgramBlock,
   ProgramGoal,
@@ -9,7 +9,7 @@ import type {
   ProgrammedSetUpdate,
   NewProgrammedExercise,
   UUID,
-} from '@/types/training';
+} from "@/types/training";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -21,13 +21,13 @@ import type {
  * environments where crypto.randomUUID is unavailable (rare in PWAs).
  */
 const uuid = (): UUID => {
-  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return crypto.randomUUID();
   }
   // RFC4122-ish fallback. Sufficient for client-side IDs.
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
     const r = (Math.random() * 16) | 0;
-    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
     return v.toString(16);
   });
 };
@@ -38,7 +38,7 @@ const uuid = (): UUID => {
  * references — every nested set must be independently mutable.
  */
 const deepClone = <T>(value: T): T => {
-  if (typeof structuredClone === 'function') {
+  if (typeof structuredClone === "function") {
     return structuredClone(value);
   }
   return JSON.parse(JSON.stringify(value));
@@ -59,6 +59,19 @@ interface ProgramBuilderState {
   block: ProgramBlock | null;
   /** Tracks unsaved changes for "save before leaving" guards. */
   isDirty: boolean;
+  /**
+   * The exercise currently focused in the Progression Inspector
+   * (right-hand sidebar). Stored as `{ weekId, sessionId, exerciseId }`
+   * triple because exercise IDs are unique in practice but the context
+   * (which week / session it lives in) is what the inspector needs to
+   * surface "previous week" / "next microcycle" rule triggers.
+   *
+   * Null when no exercise is selected — the inspector renders its
+   * empty state in that case.
+   */
+  selectedContext: { weekId: UUID; sessionId: UUID; exerciseId: UUID } | null;
+  /** Set / clear the active exercise context. Pass `null` to deselect. */
+  setSelectedContext: (ctx: { weekId: UUID; sessionId: UUID; exerciseId: UUID } | null) => void;
 
   // ---- Lifecycle ----
   /**
@@ -86,11 +99,7 @@ interface ProgramBuilderState {
    * Append a new programmed exercise to a specific session. The store
    * assigns `id` (if not provided) and `order` (next available index).
    */
-  addExerciseToSession: (
-    weekId: UUID,
-    sessionId: UUID,
-    exercise: NewProgrammedExercise
-  ) => void;
+  addExerciseToSession: (weekId: UUID, sessionId: UUID, exercise: NewProgrammedExercise) => void;
 
   /** Remove an exercise from a session and re-pack `order` indices. */
   removeExercise: (weekId: UUID, sessionId: UUID, exerciseId: UUID) => void;
@@ -107,7 +116,7 @@ interface ProgramBuilderState {
     sessionId: UUID,
     exerciseId: UUID,
     setNumber: number,
-    updates: ProgrammedSetUpdate
+    updates: ProgrammedSetUpdate,
   ) => void;
 
   // ---- Set CRUD (append-only; deletion handled via removeExercise/replace) ----
@@ -117,11 +126,7 @@ interface ProgramBuilderState {
    * which the coach typically overrides inline. Returns nothing — callers
    * read the resulting state from the store.
    */
-  addSetToExercise: (
-    weekId: UUID,
-    sessionId: UUID,
-    exerciseId: UUID
-  ) => void;
+  addSetToExercise: (weekId: UUID, sessionId: UUID, exerciseId: UUID) => void;
 
   // ---- Week duplication (the coach's killer feature) ----
   /**
@@ -148,7 +153,7 @@ interface ProgramBuilderState {
 const findSession = (
   block: ProgramBlock | null,
   weekId: UUID,
-  sessionId: UUID
+  sessionId: UUID,
 ): Session | undefined => {
   if (!block) return undefined;
   const week = block.weeks.find((w) => w.id === weekId);
@@ -159,6 +164,12 @@ export const useProgramBuilderStore = create<ProgramBuilderState>()(
   immer((set) => ({
     block: null,
     isDirty: false,
+    selectedContext: null,
+
+    setSelectedContext: (ctx) =>
+      set((state) => {
+        state.selectedContext = ctx;
+      }),
 
     // -----------------------------------------------------------------------
     // Lifecycle
@@ -166,8 +177,8 @@ export const useProgramBuilderStore = create<ProgramBuilderState>()(
 
     initializeBlock: ({
       name,
-      goal = 'Hypertrophy',
-      athlete_id = '',
+      goal = "Hypertrophy",
+      athlete_id = "",
       weeksCount,
       sessionsPerWeek,
       startDate,
@@ -291,7 +302,7 @@ export const useProgramBuilderStore = create<ProgramBuilderState>()(
         exercise.sets.push({
           id: uuid(),
           set_number: exercise.sets.length + 1,
-          reps_target: prev?.reps_target ?? '8',
+          reps_target: prev?.reps_target ?? "8",
           rpe_target: prev?.rpe_target ?? 8,
           rir_target: prev?.rir_target,
           percent_1rm_target: prev?.percent_1rm_target,
@@ -313,9 +324,7 @@ export const useProgramBuilderStore = create<ProgramBuilderState>()(
         if (sourceWeekId === targetWeekId) return; // no-op guard
 
         const sourceWeek = state.block.weeks.find((w) => w.id === sourceWeekId);
-        const targetIdx = state.block.weeks.findIndex(
-          (w) => w.id === targetWeekId
-        );
+        const targetIdx = state.block.weeks.findIndex((w) => w.id === targetWeekId);
         if (!sourceWeek || targetIdx === -1) return;
 
         const targetWeek = state.block.weeks[targetIdx];
@@ -324,38 +333,34 @@ export const useProgramBuilderStore = create<ProgramBuilderState>()(
         // Then re-stamp every id at every level — sessions, exercises,
         // sets, and superset groupings — so the cloned tree is fully
         // independent and won't collide with the source on save.
-        const clonedSessions: Session[] = deepClone(sourceWeek.sessions).map(
-          (session) => {
-            // Map old superset_ids -> new superset_ids so groups stay
-            // intact within the cloned week (A1/A2 must remain paired).
-            const supersetIdMap = new Map<UUID, UUID>();
+        const clonedSessions: Session[] = deepClone(sourceWeek.sessions).map((session) => {
+          // Map old superset_ids -> new superset_ids so groups stay
+          // intact within the cloned week (A1/A2 must remain paired).
+          const supersetIdMap = new Map<UUID, UUID>();
 
-            const remappedExercises: ProgrammedExercise[] = session.exercises.map(
-              (ex) => {
-                let newSupersetId: UUID | undefined;
-                if (ex.superset_id) {
-                  if (!supersetIdMap.has(ex.superset_id)) {
-                    supersetIdMap.set(ex.superset_id, uuid());
-                  }
-                  newSupersetId = supersetIdMap.get(ex.superset_id);
-                }
-
-                return {
-                  ...ex,
-                  id: uuid(),
-                  superset_id: newSupersetId,
-                  sets: ex.sets.map((s) => ({ ...s, id: uuid() })),
-                };
+          const remappedExercises: ProgrammedExercise[] = session.exercises.map((ex) => {
+            let newSupersetId: UUID | undefined;
+            if (ex.superset_id) {
+              if (!supersetIdMap.has(ex.superset_id)) {
+                supersetIdMap.set(ex.superset_id, uuid());
               }
-            );
+              newSupersetId = supersetIdMap.get(ex.superset_id);
+            }
 
             return {
-              ...session,
+              ...ex,
               id: uuid(),
-              exercises: remappedExercises,
+              superset_id: newSupersetId,
+              sets: ex.sets.map((s) => ({ ...s, id: uuid() })),
             };
-          }
-        );
+          });
+
+          return {
+            ...session,
+            id: uuid(),
+            exercises: remappedExercises,
+          };
+        });
 
         // Replace target week contents while preserving its identity
         // (id, order, is_deload flag).
@@ -366,7 +371,7 @@ export const useProgramBuilderStore = create<ProgramBuilderState>()(
 
         state.isDirty = true;
       }),
-  }))
+  })),
 );
 
 // ---------------------------------------------------------------------------
@@ -375,7 +380,7 @@ export const useProgramBuilderStore = create<ProgramBuilderState>()(
 
 // Internal selector scope alias (avoids exporting the full state type just
 // for selector consumers).
-type ProgrammedSelectorScope = Pick<ProgramBuilderState, 'block'>;
+type ProgrammedSelectorScope = Pick<ProgramBuilderState, "block">;
 
 /** Selector: get a week by id without re-rendering on unrelated changes. */
 export const selectWeek =

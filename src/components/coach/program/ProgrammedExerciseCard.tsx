@@ -145,6 +145,22 @@ export const ProgrammedExerciseCard = memo(function ProgrammedExerciseCard({
   // be overkill since the function references are stable inside zustand.
   const updateSetProgression = useProgramBuilderStore((s) => s.updateSetProgression);
   const addSetToExercise = useProgramBuilderStore((s) => s.addSetToExercise);
+  // Inspector wiring — click anywhere on the card surface (outside form
+  // controls + remove button) to focus this exercise in the right-hand
+  // ProgressionInspector. Selection is derived from `selectedContext` so
+  // the visual highlight reflects the store, not local state.
+  const selectedContext = useProgramBuilderStore((s) => s.selectedContext);
+  const setSelectedContext = useProgramBuilderStore((s) => s.setSelectedContext);
+  const isSelected =
+    selectedContext?.weekId === weekId &&
+    selectedContext?.sessionId === sessionId &&
+    selectedContext?.exerciseId === exercise.id;
+
+  const focusInInspector = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Don't hijack clicks meant for the form inputs / remove button.
+    if ((e.target as HTMLElement).closest("input, button, [role='button']")) return;
+    setSelectedContext({ weekId, sessionId, exerciseId: exercise.id });
+  };
 
   const patch = useCallback(
     (set: ProgrammedSet, updates: ProgrammedSetUpdate) => {
@@ -180,14 +196,17 @@ export const ProgrammedExerciseCard = memo(function ProgrammedExerciseCard({
 
   return (
     <div
+      onClick={focusInInspector}
       className={cn(
         // Aura compact card: rounded-2xl, surface-container-lowest,
         // soft 1px outline-variant, ambient shadow on hover.
-        "group/card rounded-2xl border bg-surface-container-lowest",
+        "group/card rounded-2xl border bg-surface-container-lowest cursor-pointer",
         "shadow-sm transition-all hover:shadow-[0_4px_14px_rgb(0,0,0,0.04)]",
         isHighRisk
           ? "border-destructive/40 hover:border-destructive/60"
-          : "border-outline-variant/20 hover:border-outline-variant/40",
+          : isSelected
+            ? "border-primary ring-2 ring-primary/30"
+            : "border-outline-variant/20 hover:border-outline-variant/40",
       )}
     >
       {/* Header — exercise name + remove */}
