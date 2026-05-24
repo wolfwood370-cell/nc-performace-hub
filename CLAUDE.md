@@ -93,9 +93,15 @@ Se decidi: **dichiara** in 1 riga ("Decisione: useShallow per leggere block + di
 4. Esegui task seguendo il workflow del file
 5. Build gate (tsc --noEmit)
 6. Commit (italiano + Co-Authored-By)
-7. Ricorda all'utente le istruzioni GitHub Desktop
-   (fetch → merge into branch → push)
+7. VERIFICA COMMIT (auto, immediato):
+     git log --oneline -1  +  git status         → conferma hash + working tree clean
+8. Ricorda all'utente le istruzioni GitHub Desktop
+   (fetch → merge into branch → verifica types.ts → push)
+9. VERIFICA PUSH (solo a richiesta utente, MAI auto):
+     git fetch origin  +  git status -sb         → conferma sync local/origin
 ```
+
+**Regola chiave**: il commit lo verifichi sempre subito dopo `git commit`. Il push lo verifichi SOLO quando l'utente lo chiede o conferma di averlo fatto — mai autonomamente (sprecherebbe un fetch). Vedi `00-CORE.md §6.3` e `§6.5`.
 
 ---
 

@@ -161,9 +161,23 @@ npx tsc --noEmit -p tsconfig.app.json        # 3. Build gate
 git add <files specifici, no -A>             # 4. Stage
 git commit -m "<tipo>(<area>): <msg ita>     # 5. Commit + co-author
                                               #    NON pushare
+# 6. Verifica commit success (sempre, auto, immediato)
+git log --oneline -1                          # → mostra hash + msg del nuovo commit
+git status                                    # → working tree clean
 ```
 
-### 6.3 Loop utente (GitHub Desktop) — ricorda sempre dopo commit
+### 6.3 Verifica commit success (sempre, auto)
+
+Dopo ogni `git commit`, IMMEDIATAMENTE:
+
+```bash
+git log --oneline -1     # Conferma hash + msg del commit appena creato
+git status               # Conferma working tree clean (no file modificati residui)
+```
+
+Se commit ha emesso warning prettier/lint-staged (es. CRLF/LF, reformat), è OK — il commit è andato. Se invece `git status` mostra "Changes not staged" → il commit non ha incluso tutti i file: STOP e segnala all'utente.
+
+### 6.4 Loop utente (GitHub Desktop) — ricorda sempre dopo commit
 
 1. **Fetch origin**
 2. **Switch** sul branch `claude/<slug>` (se non già attivo)
@@ -171,7 +185,31 @@ git commit -m "<tipo>(<area>): <msg ita>     # 5. Commit + co-author
 4. **Verifica `types.ts`**: se Lovable ha rimosso `appointments`, segnala all'AI per hand-patch (§9)
 5. **Push origin**
 
-### 6.4 Cleanup branch (post-merge in main)
+### 6.5 Verifica push success (a richiesta utente o quando utente lo conferma)
+
+**Mai automatico** — solo quando l'utente dice "verifica il push", "ho fatto push", "fatto" dopo il reminder GitHub Desktop, o equivalente.
+
+```bash
+git fetch origin                                          # 1. Aggiorna refs remote
+git status -sb                                            # 2. Confronto local vs upstream
+git log --oneline -5 origin/main                          # 3. Verifica commit AI presenti su origin/main
+git log --oneline origin/claude/<slug> 2>&1 || \
+  echo "(branch claude/* non pushato — normale se mergiato in main)"
+```
+
+**Interpretazione output**:
+
+| Output `git status -sb`                               | Significato                                                                  |
+| ----------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `## claude/<slug>...origin/main` senza ahead/behind   | ✅ Push success — locale e main sincronizzati (utente ha mergiato + pushato) |
+| `## claude/<slug>...origin/<slug>` senza ahead/behind | ✅ Push success — branch claude pushato direttamente (no merge)              |
+| `[ahead N]`                                           | ❌ Push non fatto — N commit locali non su origin                            |
+| `[behind N]`                                          | ⚠️ Origin ha commit nuovi che il locale non ha (Lovable regen?)              |
+| `[ahead N, behind M]`                                 | ⚠️ Divergenza — serve merge/rebase                                           |
+
+Riporta esito all'utente in 1-2 righe + lista hash commit confermati su origin.
+
+### 6.6 Cleanup branch (post-merge in main)
 
 ```bash
 # Dal repo principale (NON dal worktree)
