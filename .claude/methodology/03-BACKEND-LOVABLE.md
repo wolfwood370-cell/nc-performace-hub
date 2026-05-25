@@ -122,23 +122,23 @@ git log -p src/integrations/supabase/types.ts | grep -B 2 -A 60 "^\+      appoin
 
 15 functions in `supabase/functions/`:
 
-| Function                  | Category    | Auth                 | Note                           |
-| ------------------------- | ----------- | -------------------- | ------------------------------ |
-| `analyze-athlete-week`    | AI          | User (coach)         | Weekly summary athlete         |
-| `analyze-meal-photo`      | AI vision   | User (athlete)       | Photo → macros                 |
-| `ask-copilot`             | AI          | User (coach)         | Master Copilot Q&A             |
-| `chat-with-coach`         | AI          | User (athlete/coach) | Chat realtime con AI assist    |
-| `check-achievements`      | Logic       | User (athlete)       | Verifica + assegna achievement |
-| `create-checkout-session` | Stripe      | User (coach)         | Stripe Checkout URL            |
-| `create-portal-session`   | Stripe      | User (coach)         | Customer Portal URL            |
-| `delete-athlete`          | Destructive | User (coach)         | Cascade delete via RPC         |
-| `forgot-password`         | Auth        | Public (rate limit)  | Magic link reset               |
-| `generate-batch-checkins` | AI          | User (coach)         | Batch checkin questions        |
-| `generate-program`        | AI          | User (coach)         | Program da prompt              |
-| `ingest-knowledge`        | AI          | User (coach)         | Aggiunge doc a RAG             |
-| `invite-athlete`          | Logic       | User (coach)         | Invio invito email             |
-| `send-email`              | Util        | Service (internal)   | SMTP wrapper                   |
-| `stripe-webhook`          | Webhook     | Stripe signature     | Sub events                     |
+| Function                  | Category    | Auth                 | Note                                                               |
+| ------------------------- | ----------- | -------------------- | ------------------------------------------------------------------ |
+| `analyze-athlete-week`    | AI          | User (coach)         | Weekly summary athlete                                             |
+| `analyze-meal-photo`      | AI vision   | User (athlete)       | Photo → macros                                                     |
+| `ask-copilot`             | AI          | User (coach)         | Master Copilot Q&A                                                 |
+| `chat-with-coach`         | AI          | User (athlete/coach) | Chat realtime con AI assist                                        |
+| `check-achievements`      | Logic       | User (athlete)       | Verifica + assegna achievement                                     |
+| `create-checkout-session` | Stripe      | User (coach)         | Stripe Checkout URL + Origin whitelist + is_coach_of_athlete check |
+| `create-portal-session`   | Stripe      | User (coach)         | Customer Portal URL                                                |
+| `delete-athlete`          | Destructive | User (coach)         | Cascade delete via RPC                                             |
+| `forgot-password`         | Auth        | Public (rate limit)  | Magic link reset                                                   |
+| `generate-batch-checkins` | AI          | User (coach)         | Batch checkin questions                                            |
+| `generate-program`        | AI          | User (coach)         | Program da prompt                                                  |
+| `ingest-knowledge`        | AI          | User (coach)         | Aggiunge doc a RAG                                                 |
+| `invite-athlete`          | Logic       | User (coach)         | Invio invito email                                                 |
+| `send-email`              | Util        | Service (internal)   | SMTP wrapper                                                       |
+| `stripe-webhook`          | Webhook     | Stripe signature     | Sub events                                                         |
 
 ### 3.1 Pattern shared mancante (opportunità)
 
@@ -276,6 +276,86 @@ Per ogni edge function nuova/modificata:
 - [ ] Defense in depth: FE check + RLS + edge re-check
 - [ ] Service role key SOLO server-side, mai exported al client
 - [ ] Migration testata in branch staging prima di prod (se applicabile)
+
+### 5.1 Pattern: ownership check via RPC `is_coach_of_athlete`
+
+Quando un'edge function permette al coach di agire per conto di un athlete
+(es. `create-checkout-session` con `athlete_id` payload), serve verificare
+la relazione coach→athlete via RPC (non si può fidare del client).
+
+Pattern canonico (commit Lovable `082df0b`):
+
+```ts
+// Use USER client (auth header), NOT service role — l'RPC è SECURITY DEFINER
+// internamente e risolve auth.uid() dal token, quindi il check è fatto
+// dal DB con identità dell'utente reale.
+const userClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
+  global: { headers: { Authorization: authHeader } },
+});
+
+if (targetAthleteId !== user.id) {
+  const { data: isCoach, error } = await userClient.rpc("is_coach_of_athlete", {
+    p_athlete_id: targetAthleteId,
+  });
+  if (error || !isCoach) {
+    return new Response(JSON.stringify({ error: "Forbidden" }), {
+      status: 403,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+}
+```
+
+Funzioni con questo pattern oggi: `create-checkout-session`. Da estendere
+a qualsiasi edge function che riceve `athlete_id` da un payload coach.
+
+### 5.2 Pattern: trigger anti privilege-escalation su `profiles`
+
+Defense in depth contro user-side modifica diretta di campi sensibili
+(role, coach*id, subscription*\*). Migration Lovable `20260525125306`:
+
+```sql
+CREATE OR REPLACE FUNCTION public.prevent_profile_privilege_escalation()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  -- Service role / postgres bypass
+  IF current_setting('role', true) = 'service_role' THEN
+    RETURN NEW;
+  END IF;
+
+  IF NEW.role IS DISTINCT FROM OLD.role THEN
+    RAISE EXCEPTION 'Changing role is not allowed';
+  END IF;
+  -- ... altri campi protetti: coach_id, subscription_tier,
+  --     subscription_status, current_period_end
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trg_prevent_profile_privilege_escalation
+  BEFORE UPDATE ON public.profiles
+  FOR EACH ROW
+  EXECUTE FUNCTION public.prevent_profile_privilege_escalation();
+```
+
+Caratteristiche:
+
+- **SECURITY DEFINER + bypass service_role**: edge functions con service
+  key possono ancora aggiornare (es. stripe-webhook che setta
+  `subscription_status='active'` post-payment).
+- **Per-field DISTINCT check**: lascia passare tutti gli UPDATE che NON
+  toccano i campi protetti. User può ancora aggiornare `full_name`,
+  `avatar_url`, preferences, ecc.
+- **RAISE EXCEPTION blocca la transazione**: la query fallisce a livello
+  PostgreSQL, RLS bypass via service role è l'unica via per aggiornare
+  i campi protetti.
+
+Pattern replicabile su altre tabelle con campi sensibili (es. `coach_alerts`
+con `severity`, `workout_logs` con `completed_at`).
 
 <a id="6-stripe"></a>
 
