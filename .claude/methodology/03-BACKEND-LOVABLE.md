@@ -8,6 +8,7 @@
 
 ## Indice
 
+0. [⚠ Security ownership policy](#0-security-ownership)
 1. [Architettura Lovable Cloud](#1-arch)
 2. [Supabase client + types.ts hand-patch](#2-client)
 3. [Edge functions inventario](#3-edge-inventory)
@@ -19,6 +20,81 @@
 9. [Realtime subscriptions](#9-realtime)
 10. [Logging + observability](#10-logging)
 11. [Anti-pattern backend](#11-antipatterns)
+
+---
+
+<a id="0-security-ownership"></a>
+
+## 0. ⚠ Security ownership policy
+
+**Decisione 2026-05-25**: i security issues sono ownership del **Lovable Security Agent**, NON di Claude. Vale per:
+
+- Lovable Supabase Advisor warnings (qualsiasi severity)
+- RLS policy gaps
+- Edge function auth bypasses
+- SECURITY DEFINER hardening
+- Realtime topic scoping
+- Privilege escalation triggers
+- Storage bucket policies
+- Stripe webhook signature / Origin header issues
+
+### 0.1 Perché Lovable, non Claude
+
+| Capability                                                                    | Lovable Agent         | Claude                                    |
+| ----------------------------------------------------------------------------- | --------------------- | ----------------------------------------- |
+| Accesso DB live                                                               | ✅ diretto            | ❌ via worktree + merge                   |
+| Apply migration immediato                                                     | ✅ in-place           | ❌ deve aspettare deploy post-merge       |
+| Test RLS post-apply                                                           | ✅ può eseguire query | ❌ solo via FE smoke test                 |
+| Conoscenza limitazioni Lovable Cloud (es. `realtime.messages` blocked schema) | ✅ a priori           | ❌ scopre solo a deploy fallito           |
+| Visibilità Advisor real-time                                                  | ✅ stato corrente DB  | ❌ legge solo screenshot utente           |
+| Costo iteration                                                               | basso (in-place)      | alto (commit → merge → deploy → re-audit) |
+
+In pratica: per ogni iterazione security, Lovable chiude il loop in secondi. Claude richiede 3+ round (commit, merge bidirezionale GitHub Desktop, attesa deploy Lovable, re-audit Advisor) e produce migration "tentative" perché non può testare contro lo schema live.
+
+### 0.2 Workflow corretto
+
+```
+1. Advisor warning emerso
+   ↓
+2. L'UTENTE chiede a Lovable Security Agent di fixare
+   ↓
+3. Lovable applica fix (edge fn edits + migrations) direttamente su main
+   ↓
+4. L'utente sincronizza il worktree Claude via fast-forward:
+     git fetch origin && git merge --ff-only origin/main
+   ↓
+5. Claude verifica:
+     - tsc --noEmit verde
+     - blocco `appointments` in types.ts (handpatch §2.2)
+     - cast `(supabase as any)` in useCoachAppointments se serve
+   ↓
+6. Claude estrae pattern persistenti utili
+   (es. trigger anti-escalation, ownership RPC) e aggiorna la
+   metodologia con `docs: aggiungi pattern <X> da Lovable fix`.
+```
+
+### 0.3 Quando Claude può intervenire su security
+
+Solo se l'utente lo chiede **esplicitamente**, e in 2 casi specifici:
+
+1. **Bug runtime causato indirettamente da security** (es. `fa84fa3` Realtime channel race su `/coach`). Non è un security issue, è un bug funzionale → Claude può fixarlo.
+2. **Pattern estrazione/documentazione** post-fix Lovable (es. estrarre helper `_shared/origin-validator.ts` da 4 edge functions con whitelist duplicato).
+
+Per tutto il resto: **STOP & ASK** quando l'utente menziona "sicurezza" / "vulnerability" / "Advisor" / "RLS".
+
+### 0.4 Cosa fare quando l'utente passa screenshot Advisor
+
+1. **Non proporre fix di iniziativa.** Attendi che l'utente dica "fai correggere a Lovable" oppure esplicitamente "fixa tu".
+2. **Puoi analizzare** lo screenshot per capire la natura del warning, ma il next step di default è: "Vuoi che gestisca Lovable o procedo io?"
+3. **Se l'utente dice "Lovable"**: aspetta il merge, poi sync + verifica + eventuale estrazione pattern in metodologia.
+4. **Se l'utente dice "Claude"**: procedi con migration tentative + commit, e dichiara esplicitamente i rischi (es. "policy su `realtime.messages` può essere bloccata da Lovable Cloud schema management").
+
+### 0.5 Pattern estratti dai fix Lovable già documentati
+
+- §5.1 Ownership check via RPC `is_coach_of_athlete` (da commit Lovable `082df0b`)
+- §5.2 Trigger anti privilege-escalation su `profiles` (da migration Lovable `20260525125306`)
+
+Quando Lovable produce un nuovo pattern security, estrai in §5.x con riferimento al commit/migration di origine.
 
 ---
 

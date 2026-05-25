@@ -41,15 +41,16 @@
 
 **Auto mode**: per default decidi e procedi. Chiedi via `AskUserQuestion` solo se:
 
-| Caso                                                | Esempio                                                                                      |
-| --------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| **Direzione architetturale ambigua**                | "Usiamo Zustand o Context per il nuovo store?" — solo se l'impatto è cross-cutting (>3 file) |
-| **Breaking change su API pubblica**                 | Cambio props di un componente usato in 10+ posti                                             |
-| **Decisione commerciale/business**                  | Pricing, copy marketing, feature flag, default plan                                          |
-| **Conflitto fra istruzioni**                        | User dice X, DESIGN.md dice Y                                                                |
-| **Possibile data loss**                             | Migration destructive, drop column, cascade delete                                           |
-| **RLS bypass o Stripe destructive**                 | Disabilitazione policy, modifica webhook event handling                                      |
-| **Color/spacing non mappabile** Stitch → token Aura | Hex che non corrisponde a nessun token esistente                                             |
+| Caso                                                | Esempio                                                                                         |
+| --------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| **Direzione architetturale ambigua**                | "Usiamo Zustand o Context per il nuovo store?" — solo se l'impatto è cross-cutting (>3 file)    |
+| **Breaking change su API pubblica**                 | Cambio props di un componente usato in 10+ posti                                                |
+| **Decisione commerciale/business**                  | Pricing, copy marketing, feature flag, default plan                                             |
+| **Conflitto fra istruzioni**                        | User dice X, DESIGN.md dice Y                                                                   |
+| **Possibile data loss**                             | Migration destructive, drop column, cascade delete                                              |
+| **RLS bypass o Stripe destructive**                 | Disabilitazione policy, modifica webhook event handling                                         |
+| **Security issue / Advisor warning**                | **SEMPRE chiedi** — default deferire a Lovable Security Agent (vedi `03-BACKEND-LOVABLE.md §0`) |
+| **Color/spacing non mappabile** Stitch → token Aura | Hex che non corrisponde a nessun token esistente                                                |
 
 Se decidi senza chiedere, **dichiara** in 1 riga nella risposta:
 

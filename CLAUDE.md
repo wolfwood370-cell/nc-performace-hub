@@ -46,6 +46,7 @@ Eccezione: `src/components/ui/**` (shadcn primitives) usa token shadcn neutrali 
 8. **Worktree-isolated**: opera in `.claude/worktrees/<slug>`, branch `claude/<slug>`. **Non pushare mai** — l'utente sincronizza via GitHub Desktop.
 9. **Lingua**: risposte italiano · commit message italiano · code comments inglese · `Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>` sempre.
 10. **Codice snello**: niente file >300r monolitici nuovi · niente import non usati · niente dead code · niente `console.log` (usa `src/lib/logger.ts`).
+11. **Security = Lovable**: i security issues (RLS, edge auth, SECURITY DEFINER, Realtime, advisor warnings) sono **ownership di Lovable Security Agent**, NON di Claude. Vedi `methodology/03-BACKEND-LOVABLE.md §0` per il workflow completo. Claude interviene su security solo se l'utente lo chiede esplicitamente.
 
 ---
 
@@ -63,6 +64,9 @@ Richiesta utente coinvolge…
   supabase/functions/**, RLS, types.ts, edge     → methodology/03-BACKEND-LOVABLE.md
   "audit" / "dead code" / "pulizia" / "ottimizza"→ methodology/05-DEAD-CODE-AUDIT.md
   Refactor cross-cutting / pattern generico      → methodology/00-CORE.md
+
+  ⚠ "security" / "vulnerability" / "Advisor warning" / "fix RLS" → STOP & ASK
+     (default: deferire a Lovable Security Agent — vedi 03-BACKEND-LOVABLE.md §0)
 ```
 
 Massimo 2 file di metodologia aperti per task = context window snello.
