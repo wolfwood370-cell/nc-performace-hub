@@ -4,11 +4,46 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY")!);
+
+// Origin whitelist — prevents Phishing via unvalidated Origin header.
+// Supabase Auth Advisor warning: attacker could send a request with
+// `Origin: https://evil.com` causing the CTA URL in the invite email
+// to point at evil.com.
+//
+// Allowed:
+//   - Lovable project preview/prod: <slug>--<projectId>.lovable.app or <projectId>.lovable.app
+//   - localhost (http) for local development
+//
+// Note: if/when a custom production domain is configured, extend ALLOWED_HOSTS.
+const LOVABLE_PROJECT_ID = "e1c56229-82db-4ffc-8215-23b357d4c3a9";
+const ALLOWED_HOSTS: string[] = [
+  // Custom production domains can be added here.
+];
+// Safe fallback used when the request Origin header is missing or untrusted.
+const DEFAULT_ORIGIN = `https://id-preview--${LOVABLE_PROJECT_ID}.lovable.app`;
+
+function isAllowedOrigin(origin: string): boolean {
+  try {
+    const u = new URL(origin);
+    if (u.protocol === "http:" && (u.hostname === "localhost" || u.hostname === "127.0.0.1")) {
+      return true;
+    }
+    if (u.protocol !== "https:") return false;
+    if (
+      u.hostname.endsWith(`--${LOVABLE_PROJECT_ID}.lovable.app`) ||
+      u.hostname === `${LOVABLE_PROJECT_ID}.lovable.app`
+    ) {
+      return true;
+    }
+    return ALLOWED_HOSTS.includes(u.hostname);
+  } catch {
+    return false;
+  }
+}
 
 function buildInviteHtml(coachName: string, ctaUrl: string): string {
   return `
@@ -77,10 +112,13 @@ serve(async (req) => {
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } }
+      { global: { headers: { Authorization: authHeader } } },
     );
 
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabaseClient.auth.getUser();
     if (authError || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
@@ -116,7 +154,12 @@ serve(async (req) => {
 
     if (type === "invite") {
       const coachName = emailData?.coachName || profile.full_name || "Il tuo Coach";
-      const origin = req.headers.get("origin") || "https://id-preview--e1c56229-82db-4ffc-8215-23b357d4c3a9.lovable.app";
+      // Validate caller-provided Origin against whitelist (anti-phishing).
+      // Untrusted / missing origin → fall back to the safe project default,
+      // so the CTA link in the email can never point at an attacker domain.
+      const requestOrigin = req.headers.get("origin");
+      const origin =
+        requestOrigin && isAllowedOrigin(requestOrigin) ? requestOrigin : DEFAULT_ORIGIN;
       const ctaUrl = `${origin}/auth?mode=signup&email=${encodeURIComponent(to)}`;
       emailSubject = emailSubject || `${coachName} ti ha invitato su Coach Athlete Hub`;
       html = buildInviteHtml(coachName, ctaUrl);

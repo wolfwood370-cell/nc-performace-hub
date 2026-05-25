@@ -24,6 +24,43 @@ const json = (body: unknown, status: number) =>
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+// Origin whitelist — prevents Open Redirect via unvalidated `redirectTo`.
+// Supabase Auth Advisor warning: attacker could pass redirectTo=https://evil.com
+// and the recovery email would steer the user to evil.com after auth.
+//
+// Allowed:
+//   - Lovable project preview/prod: <slug>--<projectId>.lovable.app or <projectId>.lovable.app
+//   - localhost (http) for local development
+//
+// Note: if/when a custom production domain is configured, extend ALLOWED_HOSTS.
+const LOVABLE_PROJECT_ID = "e1c56229-82db-4ffc-8215-23b357d4c3a9";
+const ALLOWED_HOSTS = [
+  // Custom production domains can be added here.
+];
+
+function isAllowedRedirect(url: string): boolean {
+  try {
+    const u = new URL(url);
+    // Allow http://localhost[:port] for dev workflows only.
+    if (u.protocol === "http:" && (u.hostname === "localhost" || u.hostname === "127.0.0.1")) {
+      return true;
+    }
+    // Require HTTPS for any non-localhost destination.
+    if (u.protocol !== "https:") return false;
+    // Allow Lovable preview/prod hosts tied to this project.
+    if (
+      u.hostname.endsWith(`--${LOVABLE_PROJECT_ID}.lovable.app`) ||
+      u.hostname === `${LOVABLE_PROJECT_ID}.lovable.app`
+    ) {
+      return true;
+    }
+    // Allow explicitly whitelisted hosts (custom domains).
+    return ALLOWED_HOSTS.includes(u.hostname);
+  } catch {
+    return false;
+  }
+}
+
 interface Payload {
   email?: string;
   redirectTo?: string;
@@ -59,8 +96,11 @@ serve(async (req) => {
       return json({ error: "Email non valida" }, 400);
     }
 
+    // Validate redirectTo against the Origin whitelist (anti Open Redirect).
+    // Any non-whitelisted URL is silently dropped — Supabase falls back to
+    // the project Site URL configured in the Auth dashboard.
     const redirectTo =
-      typeof payload.redirectTo === "string" && payload.redirectTo.startsWith("http")
+      typeof payload.redirectTo === "string" && isAllowedRedirect(payload.redirectTo)
         ? payload.redirectTo
         : undefined;
 
@@ -68,12 +108,11 @@ serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    const { data: linkData, error: linkError } =
-      await supabaseAdmin.auth.admin.generateLink({
-        type: "recovery",
-        email,
-        options: redirectTo ? { redirectTo } : undefined,
-      });
+    const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+      type: "recovery",
+      email,
+      options: redirectTo ? { redirectTo } : undefined,
+    });
 
     if (linkError) {
       const message = linkError.message ?? "";
