@@ -120,8 +120,20 @@ export default function CoachAthletes() {
 
   useEffect(() => {
     if (!user) return;
+
+    const channelName = "live-sessions-realtime";
+
+    // Defensive: remove any stale channel with this topic before re-subscribing.
+    // See useCoachAlerts.ts for full rationale (HMR / singleton client race).
+    supabase
+      .getChannels()
+      .filter((c) => c.topic === `realtime:${channelName}`)
+      .forEach((c) => {
+        supabase.removeChannel(c);
+      });
+
     const channel = supabase
-      .channel("live-sessions-realtime")
+      .channel(channelName)
       .on("postgres_changes", { event: "*", schema: "public", table: "workout_logs" }, () => {
         queryClient.invalidateQueries({ queryKey: ["live-sessions", user.id] });
       })

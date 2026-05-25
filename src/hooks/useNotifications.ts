@@ -41,8 +41,19 @@ export function useNotifications() {
   useEffect(() => {
     if (!user?.id) return;
 
+    const channelName = `notifications-${user.id}`;
+
+    // Defensive: remove any stale channel with this topic before re-subscribing.
+    // See useCoachAlerts.ts for full rationale (HMR / singleton client race).
+    supabase
+      .getChannels()
+      .filter((c) => c.topic === `realtime:${channelName}`)
+      .forEach((c) => {
+        supabase.removeChannel(c);
+      });
+
     const channel = supabase
-      .channel(`notifications-${user.id}`)
+      .channel(channelName)
       .on(
         "postgres_changes",
         {

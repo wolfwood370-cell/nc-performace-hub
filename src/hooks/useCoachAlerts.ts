@@ -53,8 +53,22 @@ export function useCoachAlerts() {
   useEffect(() => {
     if (!user?.id) return;
 
+    const channelName = `coach-alerts-${user.id}`;
+
+    // Defensive: remove any stale channel with this topic before re-subscribing.
+    // The Supabase client is a process-wide singleton — under HMR, cache reload,
+    // or rapid re-mount the previous channel can survive in client.getChannels()
+    // already in 'subscribed' state. Calling `.on()` on a subscribed channel
+    // throws: "cannot add postgres_changes callbacks ... after subscribe()".
+    supabase
+      .getChannels()
+      .filter((c) => c.topic === `realtime:${channelName}`)
+      .forEach((c) => {
+        supabase.removeChannel(c);
+      });
+
     const channel = supabase
-      .channel(`coach-alerts-${user.id}`)
+      .channel(channelName)
       .on(
         "postgres_changes",
         {

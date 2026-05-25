@@ -295,8 +295,19 @@ export function useMessages(roomId: string | null) {
   const subscribeToMessages = (callback: (message: Message) => void) => {
     if (!roomId) return () => {};
 
+    const channelName = `room-${roomId}`;
+
+    // Defensive: remove any stale channel with this topic before re-subscribing.
+    // See useCoachAlerts.ts for full rationale (HMR / singleton client race).
+    supabase
+      .getChannels()
+      .filter((c) => c.topic === `realtime:${channelName}`)
+      .forEach((c) => {
+        supabase.removeChannel(c);
+      });
+
     const channel = supabase
-      .channel(`room-${roomId}`)
+      .channel(channelName)
       .on(
         "postgres_changes",
         {
