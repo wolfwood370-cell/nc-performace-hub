@@ -338,7 +338,7 @@ function ExerciseContextTile({
   week: Microcycle;
   session: Session;
 }) {
-  const lastSet = exercise.sets.at(-1);
+  const lastSet = exercise.sets[exercise.sets.length - 1];
   return (
     <section className="rounded-2xl bg-surface-container-low p-4">
       <div className="flex items-center gap-2 mb-3">

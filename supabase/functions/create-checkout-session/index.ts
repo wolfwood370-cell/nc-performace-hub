@@ -76,6 +76,25 @@ serve(async (req) => {
     // The athlete_id is used when a coach generates a checkout link for an athlete
     const targetAthleteId = athlete_id || user.id;
 
+    // Ownership check: if creating for someone else, caller must be that athlete's coach.
+    if (targetAthleteId !== user.id) {
+      const userClient = createClient(
+        Deno.env.get("SUPABASE_URL") ?? "",
+        Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+        { global: { headers: { Authorization: authHeader } } },
+      );
+      const { data: isCoach, error: rpcError } = await userClient.rpc("is_coach_of_athlete", {
+        p_athlete_id: targetAthleteId,
+      });
+      if (rpcError || !isCoach) {
+        logStep("Ownership check failed", { targetAthleteId, rpcError });
+        return new Response(JSON.stringify({ error: "Forbidden" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     // Fetch billing plan using service role to bypass RLS
     const adminClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
