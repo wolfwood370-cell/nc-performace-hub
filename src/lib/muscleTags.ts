@@ -51,7 +51,7 @@ export const MUSCLE_TAGS = {
 } as const;
 
 // Flat list of all muscles for easy iteration
-export const ALL_MUSCLES = Object.values(MUSCLE_TAGS).flatMap((category) => category.muscles);
+const ALL_MUSCLES = Object.values(MUSCLE_TAGS).flatMap((category) => category.muscles);
 
 // Movement patterns for exercise classification
 export const MOVEMENT_PATTERNS = [
@@ -76,7 +76,7 @@ export const EXERCISE_TYPES = [
 ] as const;
 
 // Get the macro category for a muscle
-export function getMuscleCategory(muscle: string): string | undefined {
+function getMuscleCategory(muscle: string): string | undefined {
   for (const category of Object.values(MUSCLE_TAGS)) {
     if ((category.muscles as readonly string[]).includes(muscle)) {
       return category.label;

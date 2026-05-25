@@ -564,7 +564,7 @@ export function analyzeExerciseRisk(
  *
  * @internal
  */
-export const __testing = {
+const __testing = {
   effectiveScore,
   matchesCategory,
   MOVEMENT_KEYWORDS,

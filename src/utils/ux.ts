@@ -24,7 +24,7 @@ const hapticPatterns: Record<HapticType, number | number[]> = {
 /**
  * Trigger haptic feedback on supported devices
  */
-export function triggerHaptic(type: HapticType = "light"): boolean {
+function triggerHaptic(type: HapticType = "light"): boolean {
   if (typeof navigator === "undefined" || !("vibrate" in navigator)) {
     return false;
   }
@@ -84,7 +84,7 @@ export function triggerConfetti(): void {
 /**
  * Trigger gold/trophy confetti for Personal Records
  */
-export function triggerPRConfetti(): void {
+function triggerPRConfetti(): void {
   confetti({
     particleCount: 120,
     spread: 70,
@@ -113,7 +113,7 @@ export function triggerPRConfetti(): void {
 /**
  * Trigger a mini celebration for smaller achievements
  */
-export function triggerMiniCelebration(): void {
+function triggerMiniCelebration(): void {
   confetti({
     particleCount: 40,
     spread: 50,
@@ -132,7 +132,7 @@ export function triggerMiniCelebration(): void {
  * Trigger workout completion celebration
  * Combines confetti + haptic feedback
  */
-export function celebrateWorkoutComplete(): void {
+function celebrateWorkoutComplete(): void {
   triggerConfetti();
   triggerHaptic("success");
 }
@@ -141,7 +141,7 @@ export function celebrateWorkoutComplete(): void {
  * Trigger PR achievement celebration
  * Combines gold confetti + haptic feedback
  */
-export function celebratePR(): void {
+function celebratePR(): void {
   triggerPRConfetti();
   triggerHaptic("heavy");
 }
@@ -149,13 +149,13 @@ export function celebratePR(): void {
 /**
  * Trigger set completion feedback
  */
-export function onSetComplete(): void {
+function onSetComplete(): void {
   triggerHaptic("light");
 }
 
 /**
  * Trigger rest timer end feedback (audio beep + haptic vibration)
  */
-export function onRestTimerEnd(): void {
+function onRestTimerEnd(): void {
   alertRestTimerEnd();
 }

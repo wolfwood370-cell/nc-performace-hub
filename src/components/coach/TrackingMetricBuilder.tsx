@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { ChevronUp, ChevronDown, X, GripVertical } from "lucide-react";
 
 // Available tracking metrics
-export const TRACKING_METRICS = [
+const TRACKING_METRICS = [
   { value: "sets", label: "Serie (Sets)" },
   { value: "rounds", label: "Round" },
   { value: "reps", label: "Reps" },

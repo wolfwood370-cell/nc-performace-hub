@@ -31,7 +31,7 @@ function getAudioContext(): AudioContext | null {
  * Call this once early (e.g. on first tap in the workout player)
  * so subsequent plays aren't blocked by autoplay policy.
  */
-export function unlockAudio(): void {
+function unlockAudio(): void {
   const c = getAudioContext();
   if (!c) return;
   if (c.state === "suspended") {
@@ -78,7 +78,7 @@ interface BeepOptions {
  * Play a synthesised beep sequence via Web Audio API.
  * Designed to cut through Spotify / background audio.
  */
-export function playBeep(opts: BeepOptions = {}): void {
+function playBeep(opts: BeepOptions = {}): void {
   const { frequency = 880, duration = 0.12, volume = 0.6, count = 3, gap = 0.1 } = opts;
 
   const c = getAudioContext();
@@ -141,6 +141,6 @@ export function alertRestTimerEnd(): void {
 /**
  * A gentler single tick for countdown warnings (e.g. 3-2-1).
  */
-export function tickSound(): void {
+function tickSound(): void {
   playBeep({ frequency: 660, count: 1, duration: 0.06, volume: 0.3 });
 }

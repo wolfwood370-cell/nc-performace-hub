@@ -383,13 +383,13 @@ export const useProgramBuilderStore = create<ProgramBuilderState>()(
 type ProgrammedSelectorScope = Pick<ProgramBuilderState, "block">;
 
 /** Selector: get a week by id without re-rendering on unrelated changes. */
-export const selectWeek =
+const selectWeek =
   (weekId: UUID) =>
   (state: ProgramBuilderState): Microcycle | undefined =>
     state.block?.weeks.find((w) => w.id === weekId);
 
 /** Selector: get a session by composite (week, session) key. */
-export const selectSession =
+const selectSession =
   (weekId: UUID, sessionId: UUID) =>
   (state: ProgrammedSelectorScope): Session | undefined => {
     return state.block?.weeks

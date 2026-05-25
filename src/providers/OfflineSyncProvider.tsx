@@ -121,7 +121,7 @@ export function OfflineSyncProvider({ children, userRole }: OfflineSyncProviderP
   );
 }
 
-export function useOfflineStatus() {
+function useOfflineStatus() {
   return useContext(OfflineContext);
 }
 
@@ -130,7 +130,7 @@ export function useOfflineStatus() {
 // ============================================================================
 
 /** Persistent banner for coaches when offline */
-export function CoachOfflineBanner() {
+function CoachOfflineBanner() {
   const { isOnline } = useOfflineStatus();
 
   if (isOnline) return null;
@@ -146,7 +146,7 @@ export function CoachOfflineBanner() {
 }
 
 /** Warning banner for specific features */
-export function OfflineWarningBanner({ feature }: { feature: string }) {
+function OfflineWarningBanner({ feature }: { feature: string }) {
   const { isOnline } = useOfflineStatus();
 
   if (isOnline) return null;
@@ -162,7 +162,7 @@ export function OfflineWarningBanner({ feature }: { feature: string }) {
 }
 
 /** Read-only overlay that blocks interaction */
-export function OfflineReadOnlyOverlay({
+function OfflineReadOnlyOverlay({
   children,
   feature,
 }: {

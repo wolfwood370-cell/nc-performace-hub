@@ -121,7 +121,7 @@ export function useBillingPlans() {
 }
 
 // Separate hook for athlete-side subscription view
-export function useAthleteSubscription() {
+function useAthleteSubscription() {
   const { user } = useAuth();
 
   return useQuery({

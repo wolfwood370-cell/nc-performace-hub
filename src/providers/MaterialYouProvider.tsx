@@ -16,10 +16,7 @@ import { log } from "@/lib/logger";
 
 export type Neurotype = "1A" | "1B" | "2A" | "2B" | "3";
 
-export const NEUROTYPE_COLORS: Record<
-  Neurotype,
-  { hex: string; label: string; description: string }
-> = {
+const NEUROTYPE_COLORS: Record<Neurotype, { hex: string; label: string; description: string }> = {
   "1A": { hex: "#D32F2F", label: "Intenso", description: "Intensity & Competitiveness" },
   "1B": { hex: "#0097A7", label: "Preciso", description: "Speed & Precision" },
   "2A": { hex: "#7B1FA2", label: "Adattabile", description: "Variety & Adaptability" },
@@ -27,7 +24,7 @@ export const NEUROTYPE_COLORS: Record<
   "3": { hex: "#F57C00", label: "Stabile", description: "Routine & Stability" },
 };
 
-export const MANUAL_COLOR_OPTIONS = [
+const MANUAL_COLOR_OPTIONS = [
   { hex: "#6366f1", label: "Indigo" },
   { hex: "#D32F2F", label: "Red" },
   { hex: "#0097A7", label: "Cyan" },
@@ -579,7 +576,7 @@ export function MaterialYouProvider({ children }: MaterialYouProviderProps) {
 // HOOK
 // ============================================
 
-export function useMaterialYou() {
+function useMaterialYou() {
   const context = useContext(MaterialYouContext);
   if (!context) {
     throw new Error("useMaterialYou must be used within a MaterialYouProvider");
@@ -591,7 +588,7 @@ export function useMaterialYou() {
 // UTILITY CLASSES (for Tailwind integration)
 // ============================================
 
-export const m3 = {
+const m3 = {
   // Surfaces
   surface: "bg-[hsl(var(--m3-surface))]",
   surfaceContainer: "bg-[hsl(var(--m3-surface-container))]",

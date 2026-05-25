@@ -292,6 +292,6 @@ export function useSaveProgramBlock(): UseMutationResult<
 // Cache-key helpers (exported for invalidation from sibling hooks)
 // ---------------------------------------------------------------------------
 
-export const programBlockQueryKey = (id: string) => ["program-block", id] as const;
+const programBlockQueryKey = (id: string) => ["program-block", id] as const;
 
-export const programBlocksListQueryKey = () => ["program-blocks"] as const;
+const programBlocksListQueryKey = () => ["program-blocks"] as const;

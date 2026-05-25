@@ -196,4 +196,4 @@ export function useExerciseLibraryQuery({
  * `queryClient.invalidateQueries({ queryKey: exerciseLibraryQueryKey() })`
  * after creating/editing/archiving an exercise.
  */
-export const exerciseLibraryQueryKey = () => ["exercise-library"] as const;
+const exerciseLibraryQueryKey = () => ["exercise-library"] as const;

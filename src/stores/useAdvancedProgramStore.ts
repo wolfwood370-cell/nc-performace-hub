@@ -20,8 +20,4 @@
  * components built against the periodized data model).
  */
 
-export {
-  useProgramBuilderStore as useAdvancedProgramStore,
-  selectWeek,
-  selectSession,
-} from "./programBuilder/useProgramBuilderStore";
+export { useProgramBuilderStore as useAdvancedProgramStore } from "./programBuilder/useProgramBuilderStore";

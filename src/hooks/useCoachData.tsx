@@ -104,7 +104,7 @@ export function useCoachAthletes() {
   });
 }
 
-export function useCoachDashboardData() {
+function useCoachDashboardData() {
   const { user, profile } = useAuth();
   const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD format
 
@@ -510,7 +510,7 @@ function getRelativeTime(date: Date): string {
 }
 
 // Convenience hook for getting just athletes list (used by Periodization)
-export function useCoachData() {
+function useCoachData() {
   const { data: athletes, isLoading, error } = useCoachAthletes();
   return {
     athletes: athletes || [],

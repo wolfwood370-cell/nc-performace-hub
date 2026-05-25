@@ -139,7 +139,7 @@ function buildEmptyClearingMap(): Record<ClearingTestId, ClearingTestResult> {
  *
  * Returns `null` if the test is incompletely scored, `0..3` otherwise.
  */
-export function computeTestComposite(
+function computeTestComposite(
   test: FmsTestResult,
   clearingTests: Readonly<Record<ClearingTestId, ClearingTestResult>>,
 ): NullableScore {
@@ -168,7 +168,7 @@ export function computeTestComposite(
  * for bilateral tests (no asymmetry concept) and for any asymmetrical
  * test where either side is unscored.
  */
-export function computeAsymmetry(test: FmsTestResult): number | null {
+function computeAsymmetry(test: FmsTestResult): number | null {
   if (test.kind !== "asymmetrical") return null;
   if (test.leftScore === null || test.rightScore === null) return null;
   return Math.abs(test.leftScore - test.rightScore);
@@ -185,7 +185,7 @@ export function computeAsymmetry(test: FmsTestResult): number | null {
  *     explicitly toggle if pain is present. (The UI should make this
  *     unmissable, but at the data layer we trust the default.)
  */
-export function computeCompositeScore(
+function computeCompositeScore(
   tests: Readonly<Record<FmsTestId, FmsTestResult>>,
   clearingTests: Readonly<Record<ClearingTestId, ClearingTestResult>>,
 ): FmsCompositeScore {
@@ -498,6 +498,6 @@ export const useMovementStore = create<MovementStore>()(
 // ---------------------------------------------------------------------------
 
 /** Read just the active assessment (or null). Stable reference under immer. */
-export const selectAssessment = (s: MovementStore) => s.assessment;
+const selectAssessment = (s: MovementStore) => s.assessment;
 /** Read the dirty flag — used by "leave page" guards. */
-export const selectIsDirty = (s: MovementStore) => s.isDirty;
+const selectIsDirty = (s: MovementStore) => s.isDirty;
