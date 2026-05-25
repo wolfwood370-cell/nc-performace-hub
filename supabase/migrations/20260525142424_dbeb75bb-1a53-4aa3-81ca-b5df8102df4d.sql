@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS "Coaches can update athlete limits" ON public.ai_usage_tracking;
