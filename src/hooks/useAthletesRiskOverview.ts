@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 
 export type RiskLevel = "high" | "moderate" | "low" | "optimal";
-export type RiskType = "high_injury_risk" | "detraining_risk" | "low_recovery" | "overload_warning";
+type RiskType = "high_injury_risk" | "detraining_risk" | "low_recovery" | "overload_warning";
 
 export interface RiskFlag {
   type: RiskType;

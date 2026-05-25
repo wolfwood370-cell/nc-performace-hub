@@ -161,15 +161,13 @@ export function StandardSetDrawer({
             </h3>
           </div>
           <p className="text-sm text-on-surface">
-            Eccentrica controllata di 3 secondi. Esplosivo in concentrica. Non
-            sacrificare la profondità per il carico.
+            Eccentrica controllata di 3 secondi. Esplosivo in concentrica. Non sacrificare la
+            profondità per il carico.
           </p>
           {previousReference && (
             <p className="mt-3 font-sans text-[11px] text-on-surface-variant">
-              <span className="font-semibold tracking-wider uppercase">
-                Precedente
-              </span>{" "}
-              · {previousReference}
+              <span className="font-semibold tracking-wider uppercase">Precedente</span> ·{" "}
+              {previousReference}
             </p>
           )}
         </div>
@@ -181,8 +179,7 @@ export function StandardSetDrawer({
           </h3>
           {completedSets.length === 0 ? (
             <p className="px-1 text-sm italic text-on-surface-variant/70">
-              Nessuna serie ancora loggata. Compila kg + reps qui sotto e
-              tocca "Aggiungi Set".
+              Nessuna serie ancora loggata. Compila kg + reps qui sotto e tocca "Aggiungi Set".
             </p>
           ) : (
             <ul className="flex flex-col gap-2">
@@ -200,15 +197,11 @@ export function StandardSetDrawer({
                   </span>
                   <span className="font-display text-sm font-semibold text-on-surface text-center tabular-nums">
                     {set.weight}{" "}
-                    <span className="text-on-surface-variant text-xs font-normal">
-                      kg
-                    </span>
+                    <span className="text-on-surface-variant text-xs font-normal">kg</span>
                   </span>
                   <span className="font-display text-sm font-semibold text-on-surface text-center tabular-nums">
                     {set.reps}{" "}
-                    <span className="text-on-surface-variant text-xs font-normal">
-                      reps
-                    </span>
+                    <span className="text-on-surface-variant text-xs font-normal">reps</span>
                   </span>
                   <span
                     aria-hidden="true"
@@ -335,16 +328,10 @@ export function StandardSetDrawer({
             "hover:brightness-110 active:scale-[0.98]",
           )}
         >
-          <Play
-            className="h-5 w-5 fill-white"
-            strokeWidth={0}
-            aria-hidden="true"
-          />
+          <Play className="h-5 w-5 fill-white" strokeWidth={0} aria-hidden="true" />
           Termina Esercizio
         </button>
       </footer>
     </DrawerShell>
   );
 }
-
-export default StandardSetDrawer;

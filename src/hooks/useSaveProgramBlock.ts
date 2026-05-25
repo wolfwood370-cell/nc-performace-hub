@@ -74,7 +74,7 @@ import type { ProgramBlock } from "@/types/training";
 // Public types
 // ---------------------------------------------------------------------------
 
-export type SaveProgramBlockStatus = "draft" | "published" | "archived";
+type SaveProgramBlockStatus = "draft" | "published" | "archived";
 
 export interface SaveProgramBlockInput {
   block: ProgramBlock;

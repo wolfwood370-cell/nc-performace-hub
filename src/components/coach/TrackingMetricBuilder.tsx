@@ -18,7 +18,7 @@ export const TRACKING_METRICS = [
   { value: "tempo", label: "TEMPO (xxxx)" },
 ] as const;
 
-export type TrackingMetricValue = (typeof TRACKING_METRICS)[number]["value"];
+type TrackingMetricValue = (typeof TRACKING_METRICS)[number]["value"];
 
 interface TrackingMetricBuilderProps {
   value: string[];

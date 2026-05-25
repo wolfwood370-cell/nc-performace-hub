@@ -35,7 +35,7 @@ export type ProgramGoal =
   | "Deload";
 
 /** ISO-8601 date string (YYYY-MM-DD). Kept as string for JSON serializability. */
-export type ISODateString = string;
+type ISODateString = string;
 
 /** UUID v4 string. Generated client-side via crypto.randomUUID(). */
 export type UUID = string;

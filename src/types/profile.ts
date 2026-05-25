@@ -16,10 +16,10 @@
 // =============================================================================
 
 /** Coach-managed training-status flag on the athlete profile. */
-export type TrainingStatus = "active" | "paused" | "archived";
+type TrainingStatus = "active" | "paused" | "archived";
 
 /** Coarse experience level used in onboarding + analytics defaults. */
-export type ExperienceLevel = "beginner" | "intermediate" | "advanced";
+type ExperienceLevel = "beginner" | "intermediate" | "advanced";
 
 /**
  * Per-profile JSONB blob stored at `profiles.settings`. Used by both

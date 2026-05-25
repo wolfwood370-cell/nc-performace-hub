@@ -58,7 +58,7 @@ interface WorkoutLog {
   exercises_data: Json | null;
 }
 
-export interface AthleteIssue {
+interface AthleteIssue {
   type:
     | "no_checkin"
     | "low_readiness"
@@ -73,7 +73,7 @@ export interface AthleteIssue {
   details?: string;
 }
 
-export interface ProblematicAthlete {
+interface ProblematicAthlete {
   id: string;
   name: string;
   avatar: string;

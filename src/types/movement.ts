@@ -115,7 +115,7 @@ export type ClearingTestId =
   | "spinal_flexion"; // gates rotary_stability
 
 /** Discriminator: how is this test scored? */
-export type TestKind = "bilateral" | "asymmetrical";
+type TestKind = "bilateral" | "asymmetrical";
 
 /**
  * Static metadata for a single FMS test. This is a *catalog* entry — the
@@ -291,7 +291,7 @@ export const CLEARING_GATE: Readonly<Partial<Record<FmsTestId, ClearingTestId>>>
  * clearing test, pain is also surfaced through the clearing-test result;
  * the boolean here is for pain on the *primary* movement.
  */
-export interface BilateralTestResult {
+interface BilateralTestResult {
   testId: FmsTestId;
   kind: "bilateral";
   score: NullableScore;
@@ -306,7 +306,7 @@ export interface BilateralTestResult {
  * composite (min of L,R) is computed at read time, never stored, so the
  * asymmetry signal is never lost.
  */
-export interface AsymmetricalTestResult {
+interface AsymmetricalTestResult {
   testId: FmsTestId;
   kind: "asymmetrical";
   leftScore: NullableScore;
@@ -331,7 +331,7 @@ export interface ClearingTestResult {
 // ---------------------------------------------------------------------------
 
 /** 0–10 NRS (Numeric Rating Scale) — clinical standard for pain intensity. */
-export type PainSeverity = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
+type PainSeverity = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
 
 /**
  * Provenance of a red flag — where the pain was reported. Distinguishing
@@ -339,7 +339,7 @@ export type PainSeverity = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
  * the clinician applying load) is a stronger contraindication signal
  * than self-reported background ache.
  */
-export type RedFlagSource =
+type RedFlagSource =
   | "clearing_test" // pain on shoulder/spinal extension/spinal flexion clear
   | "movement_test" // pain during a foundational FMS test
   | "self_report"; // athlete-reported pain outside of testing
@@ -349,7 +349,7 @@ export type RedFlagSource =
  * extend without a migration. The first set is the recommended vocabulary;
  * UI-builder may add more, but should prefer existing values.
  */
-export type RedFlagBodyZone =
+type RedFlagBodyZone =
   | "cervical"
   | "thoracic"
   | "lumbar"

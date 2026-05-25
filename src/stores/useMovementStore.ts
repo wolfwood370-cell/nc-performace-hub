@@ -229,7 +229,7 @@ export function computeCompositeScore(
  * time made nullable / omitted. The store materializes a full
  * `FmsAssessment` on `serialize()` for the save hook.
  */
-export interface DraftAssessment {
+interface DraftAssessment {
   id: UUID;
   athleteId: UUID;
   coachId: UUID;

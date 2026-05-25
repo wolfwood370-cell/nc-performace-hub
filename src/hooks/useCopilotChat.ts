@@ -36,7 +36,7 @@ export interface CopilotMessage {
   content: string;
 }
 
-export interface CopilotSource {
+interface CopilotSource {
   chunk_id: string;
   document_id: string;
   document_title: string;

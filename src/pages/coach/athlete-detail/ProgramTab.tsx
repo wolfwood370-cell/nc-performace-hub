@@ -20,21 +20,21 @@ import { it } from "date-fns/locale";
 // Props
 // ---------------------------------------------------------------------------
 
-export interface CurrentPhase {
+interface CurrentPhase {
   name: string | null;
   start_date: string;
   end_date: string;
   focus_type: string | null;
 }
 
-export interface PhaseProgress {
+interface PhaseProgress {
   currentWeek: number;
   totalWeeks: number;
   daysRemaining: number;
   percentage: number;
 }
 
-export interface ScheduledDay {
+interface ScheduledDay {
   dayName: string;
   dayNumber: number | string;
   isToday: boolean;
@@ -46,7 +46,7 @@ export interface ScheduledDay {
   } | null;
 }
 
-export interface ProgramWeeklyStats {
+interface ProgramWeeklyStats {
   totalSets: number;
   workoutsCompleted: number;
   workoutsPlanned: number;

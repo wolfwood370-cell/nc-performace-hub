@@ -42,7 +42,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/athlete/training", label: "Allenamenti", icon: Dumbbell },
 ];
 
-export function AthleteLayout() {
+function AthleteLayout() {
   return (
     <div className="min-h-[100dvh] bg-surface text-on-surface font-sans antialiased flex flex-col">
       {/*

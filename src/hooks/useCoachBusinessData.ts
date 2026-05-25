@@ -6,7 +6,7 @@ import { useToast } from "./use-toast";
 
 // ===== TYPE DEFINITIONS =====
 
-export interface CoachProduct {
+interface CoachProduct {
   id: string;
   coach_id: string;
   name: string;
@@ -18,7 +18,7 @@ export interface CoachProduct {
   updated_at: string;
 }
 
-export interface AthleteSubscription {
+interface AthleteSubscription {
   id: string;
   full_name: string | null;
   avatar_url: string | null;
@@ -27,7 +27,7 @@ export interface AthleteSubscription {
   current_period_end: string | null;
 }
 
-export interface Invoice {
+interface Invoice {
   id: string;
   athlete_id: string;
   coach_id: string;
@@ -43,7 +43,7 @@ export interface Invoice {
   };
 }
 
-export interface BusinessMetrics {
+interface BusinessMetrics {
   estimatedMRR: number;
   activeClients: number;
   pendingPayments: number;

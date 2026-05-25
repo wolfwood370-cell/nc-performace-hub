@@ -69,5 +69,3 @@ export function ProtectedAthleteRoute({ children }: ProtectedAthleteRouteProps) 
 
   return <>{children}</>;
 }
-
-export default ProtectedAthleteRoute;

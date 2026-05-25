@@ -6,7 +6,7 @@ export interface LegalConsent {
   termsAccepted: boolean; // 1.1 — must be true to proceed
 }
 
-export type Gender = "male" | "female" | "other";
+type Gender = "male" | "female" | "other";
 
 export interface BiometricsData {
   gender: Gender | null;
@@ -16,7 +16,7 @@ export interface BiometricsData {
 }
 
 // Area 1 — PAR-Q (1.2 .. 1.8)
-export interface MedicalSafetyAnswers {
+interface MedicalSafetyAnswers {
   q12: YesNoIDK | null;
   q13: YesNoIDK | null;
   q14: YesNoIDK | null;
@@ -27,7 +27,7 @@ export interface MedicalSafetyAnswers {
 }
 
 // Area 2 — FMS / Red Flags
-export interface OrthopedicAnswers {
+interface OrthopedicAnswers {
   q21: YesNoIDK | null;
   q22: YesNoIDK | null; // spine
   q23: YesNoIDK | null; // lower body
@@ -35,7 +35,7 @@ export interface OrthopedicAnswers {
 }
 
 // Area 3 — Sports background
-export interface SportsBackgroundAnswers {
+interface SportsBackgroundAnswers {
   q31: YesNoIDK | null;
   q32: YesNoIDK | null;
   q33: YesNoIDK | null;
@@ -44,7 +44,7 @@ export interface SportsBackgroundAnswers {
 }
 
 // Area 4 — Lifestyle
-export interface LifestyleAnswers {
+interface LifestyleAnswers {
   q41: YesNoIDK | null;
   q42: YesNoIDK | null;
   q43: YesNoIDK | null;
@@ -53,7 +53,7 @@ export interface LifestyleAnswers {
 }
 
 // Area 5 — Goals
-export interface GoalsAnswers {
+interface GoalsAnswers {
   q51: YesNoIDK | null;
   q52: YesNoIDK | null;
   q53: YesNoIDK | null;
@@ -63,7 +63,7 @@ export interface GoalsAnswers {
 // Area 6 — Neurotyping (15 items)
 export type NeurotypType = "1A" | "1B" | "2A" | "2B" | "3";
 
-export interface NeurotypingAnswers {
+interface NeurotypingAnswers {
   q61: YesNoIDK | null;
   q62: YesNoIDK | null;
   q63: YesNoIDK | null;

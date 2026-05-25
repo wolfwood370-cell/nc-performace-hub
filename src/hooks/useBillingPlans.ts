@@ -17,7 +17,7 @@ export interface BillingPlan {
   created_at: string;
 }
 
-export interface AthleteSubscriptionRow {
+interface AthleteSubscriptionRow {
   id: string;
   athlete_id: string;
   plan_id: string;

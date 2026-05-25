@@ -51,14 +51,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
 const inviteFormSchema = z.object({
-  firstName: z
-    .string()
-    .min(1, "Il nome è obbligatorio")
-    .max(60, "Il nome è troppo lungo"),
-  lastName: z
-    .string()
-    .min(1, "Il cognome è obbligatorio")
-    .max(60, "Il cognome è troppo lungo"),
+  firstName: z.string().min(1, "Il nome è obbligatorio").max(60, "Il nome è troppo lungo"),
+  lastName: z.string().min(1, "Il cognome è obbligatorio").max(60, "Il cognome è troppo lungo"),
   email: z.string().email("Indirizzo email non valido"),
 });
 
@@ -75,10 +69,7 @@ interface GeneratedInvite {
   email: string;
 }
 
-export function InviteAthleteDialog({
-  onAthleteInvited,
-  trigger,
-}: InviteAthleteDialogProps) {
+export function InviteAthleteDialog({ onAthleteInvited, trigger }: InviteAthleteDialogProps) {
   const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [generated, setGenerated] = useState<GeneratedInvite | null>(null);
@@ -111,14 +102,12 @@ export function InviteAthleteDialog({
       const fullName = `${data.firstName.trim()} ${data.lastName.trim()}`.trim();
       const token = crypto.randomUUID();
 
-      const { error } = await supabase
-        .from("invite_tokens")
-        .insert({
-          coach_id: user.id,
-          email: athleteEmail,
-          full_name: fullName,
-          token,
-        });
+      const { error } = await supabase.from("invite_tokens").insert({
+        coach_id: user.id,
+        email: athleteEmail,
+        full_name: fullName,
+        token,
+      });
 
       if (error) {
         // Unique-token collision is astronomically unlikely with UUIDv4
@@ -141,9 +130,7 @@ export function InviteAthleteDialog({
       onAthleteInvited?.();
     } catch (error: unknown) {
       const message =
-        error instanceof Error
-          ? error.message
-          : "Impossibile generare l'invito. Riprova.";
+        error instanceof Error ? error.message : "Impossibile generare l'invito. Riprova.";
       toast({
         variant: "destructive",
         title: "Errore",
@@ -206,17 +193,14 @@ export function InviteAthleteDialog({
             Invita Atleta
           </DialogTitle>
           <DialogDescription>
-            Genera un link di registrazione unico. L'atleta apre il link e
-            completa il signup con nome ed email già compilati.
+            Genera un link di registrazione unico. L'atleta apre il link e completa il signup con
+            nome ed email già compilati.
           </DialogDescription>
         </DialogHeader>
 
         {!generated ? (
           <Form {...form}>
-            <form
-              onSubmit={form.handleSubmit(onSubmit)}
-              className="space-y-4 pt-2"
-            >
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-2">
               <div className="grid grid-cols-2 gap-3">
                 <FormField
                   control={form.control}
@@ -285,11 +269,7 @@ export function InviteAthleteDialog({
                 >
                   Annulla
                 </Button>
-                <Button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="gradient-primary"
-                >
+                <Button type="submit" disabled={isSubmitting} className="gradient-primary">
                   {isSubmitting ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -308,9 +288,7 @@ export function InviteAthleteDialog({
         ) : (
           <div className="space-y-4 pt-2">
             <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm">
-              <p className="font-medium text-primary mb-0.5">
-                {generated.fullName}
-              </p>
+              <p className="font-medium text-primary mb-0.5">{generated.fullName}</p>
               <p className="text-muted-foreground text-xs">{generated.email}</p>
             </div>
 
@@ -345,11 +323,7 @@ export function InviteAthleteDialog({
             </div>
 
             <div className="flex justify-end gap-3 pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleGenerateAnother}
-              >
+              <Button type="button" variant="outline" onClick={handleGenerateAnother}>
                 <RefreshCcw className="h-4 w-4 mr-2" />
                 Genera altro
               </Button>
@@ -367,5 +341,3 @@ export function InviteAthleteDialog({
     </Dialog>
   );
 }
-
-export default InviteAthleteDialog;

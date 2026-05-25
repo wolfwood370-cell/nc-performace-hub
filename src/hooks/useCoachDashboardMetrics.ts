@@ -6,8 +6,8 @@ import { format } from "date-fns";
 
 // ===== TYPE DEFINITIONS =====
 
-export type AlertSeverity = "critical" | "warning" | "info";
-export type AlertType =
+type AlertSeverity = "critical" | "warning" | "info";
+type AlertType =
   | "missed_workout"
   | "low_readiness"
   | "active_injury"
@@ -28,7 +28,7 @@ export interface UrgentAlert {
   timestamp?: string;
 }
 
-export interface FeedbackItem {
+interface FeedbackItem {
   id: string;
   workoutLogId: string;
   workoutTitle: string;
@@ -42,7 +42,7 @@ export interface FeedbackItem {
   rpeGlobal: number | null;
 }
 
-export interface TodayScheduleItem {
+interface TodayScheduleItem {
   id: string;
   title: string;
   athleteId: string;
@@ -52,7 +52,7 @@ export interface TodayScheduleItem {
   status: string;
 }
 
-export interface BusinessMetrics {
+interface BusinessMetrics {
   activeClients: number;
   monthlyRecurringRevenue: number; // Mocked for now
   complianceRate: number; // % of athletes who checked in today
@@ -60,7 +60,7 @@ export interface BusinessMetrics {
   churnRisk: number; // Athletes with critical issues
 }
 
-export interface HealthyAthlete {
+interface HealthyAthlete {
   id: string;
   name: string;
   avatarUrl: string | null;

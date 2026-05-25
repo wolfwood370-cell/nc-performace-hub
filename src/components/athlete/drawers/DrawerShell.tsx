@@ -93,10 +93,7 @@ export function DrawerShell({
       >
         {/* Drag handle */}
         <div className="shrink-0 flex justify-center pt-3 pb-2">
-          <div
-            aria-hidden="true"
-            className="h-1.5 w-12 rounded-full bg-on-surface-variant/25"
-          />
+          <div aria-hidden="true" className="h-1.5 w-12 rounded-full bg-on-surface-variant/25" />
         </div>
 
         {children}
@@ -104,5 +101,3 @@ export function DrawerShell({
     </div>
   );
 }
-
-export default DrawerShell;

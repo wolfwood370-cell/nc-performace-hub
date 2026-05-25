@@ -24,9 +24,9 @@ import { AiInsightCard } from "@/components/coach/analytics/AiInsightCard";
 // Props
 // ---------------------------------------------------------------------------
 
-export type AcwrStatus = "insufficient-data" | "optimal" | "warning" | "high-risk";
+type AcwrStatus = "insufficient-data" | "optimal" | "warning" | "high-risk";
 
-export interface AcwrData {
+interface AcwrData {
   status: AcwrStatus;
   ratio: number | null;
   label: string;
@@ -34,23 +34,23 @@ export interface AcwrData {
   chronicLoad: number;
 }
 
-export interface ReadinessColors {
+interface ReadinessColors {
   stroke: string;
   text: string;
 }
 
-export interface WeightTrendPoint {
+interface WeightTrendPoint {
   date: string;
   weight_kg: number | null;
 }
 
-export interface ComplianceDay {
+interface ComplianceDay {
   day: string;
   status: "completed" | "rest" | "missed" | "future";
   isToday: boolean;
 }
 
-export interface WeeklyCompliance {
+interface WeeklyCompliance {
   days: ComplianceDay[];
   adherence: number;
 }
@@ -62,7 +62,7 @@ export interface WeeklyCompliance {
  * isn't yet wired upstream. When the parent refactor lands we can
  * tighten this to a proper `{ hasPain: false } | { hasPain: true; ... }`.
  */
-export interface PainStatus {
+interface PainStatus {
   hasPain: boolean;
   location?: string;
   severity?: string;

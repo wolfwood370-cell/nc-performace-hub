@@ -101,10 +101,7 @@ export function ExitWorkoutDialog({
           aria-hidden="true"
           className="h-16 w-16 rounded-full bg-surface-container flex items-center justify-center mb-4"
         >
-          <TriangleAlert
-            className="h-7 w-7 text-on-surface"
-            strokeWidth={2}
-          />
+          <TriangleAlert className="h-7 w-7 text-on-surface" strokeWidth={2} />
         </div>
 
         {/* Title */}
@@ -116,10 +113,7 @@ export function ExitWorkoutDialog({
         </h2>
 
         {/* Body — surfaces the live timer to anchor the choice in real cost. */}
-        <p
-          id="exit-workout-desc"
-          className="text-sm text-on-surface-variant text-center mb-7"
-        >
+        <p id="exit-workout-desc" className="text-sm text-on-surface-variant text-center mb-7">
           Il timer è a{" "}
           <span className="font-display text-base font-bold tabular-nums text-on-surface">
             {formatMMSS(timerSeconds)}
@@ -175,5 +169,3 @@ export function ExitWorkoutDialog({
     </div>
   );
 }
-
-export default ExitWorkoutDialog;

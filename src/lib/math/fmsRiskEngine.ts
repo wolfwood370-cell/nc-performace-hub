@@ -62,7 +62,7 @@ import type {
   ClearingTestId,
   ClearingTestResult,
   RedFlag,
-} from '@/types/movement';
+} from "@/types/movement";
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -114,7 +114,7 @@ export interface ExerciseInfo {
 }
 
 /** Three-tier traffic light. Order matters: high > moderate > low. */
-export type RiskLevel = 'low' | 'moderate' | 'high';
+type RiskLevel = "low" | "moderate" | "high";
 
 /**
  * The verdict returned to the caller. Designed to be JSON-serializable
@@ -152,41 +152,69 @@ export interface ExerciseRiskAssessment {
 const MOVEMENT_KEYWORDS = {
   /** Overhead-loaded shoulder work — gated by Shoulder Mobility + clearing. */
   verticalPush: {
-    patterns: ['vertical push', 'spinta_verticale', 'spinta verticale', 'overhead'],
-    targets: ['shoulders', 'spalle', 'deltoid', 'deltoidi'],
+    patterns: ["vertical push", "spinta_verticale", "spinta verticale", "overhead"],
+    targets: ["shoulders", "spalle", "deltoid", "deltoidi"],
     nameFragments: [
-      'overhead press', 'military press', 'push press', 'shoulder press',
-      'snatch', 'jerk', 'overhead squat', 'handstand',
+      "overhead press",
+      "military press",
+      "push press",
+      "shoulder press",
+      "snatch",
+      "jerk",
+      "overhead squat",
+      "handstand",
     ],
   },
   /** Knee-dominant bilateral squat — gated by Deep Squat. */
   squat: {
-    patterns: ['squat'],
+    patterns: ["squat"],
     targets: [], // Deliberately empty — we don't want generic "Legs" to gate on Deep Squat alone.
     nameFragments: [
-      'back squat', 'front squat', 'goblet squat', 'overhead squat',
-      'box squat', 'leg press', 'hack squat',
+      "back squat",
+      "front squat",
+      "goblet squat",
+      "overhead squat",
+      "box squat",
+      "leg press",
+      "hack squat",
     ],
   },
   /** Hip-dominant hinge / deadlift family — gated by ASLR. */
   hinge: {
-    patterns: ['hinge', 'deadlift'],
-    targets: ['hamstring', 'ischiocrurali', 'posterior chain', 'erettori spinali'],
+    patterns: ["hinge", "deadlift"],
+    targets: ["hamstring", "ischiocrurali", "posterior chain", "erettori spinali"],
     nameFragments: [
-      'deadlift', 'romanian deadlift', 'rdl', 'stiff leg', 'good morning',
-      'kettlebell swing', 'hip thrust', 'glute bridge',
+      "deadlift",
+      "romanian deadlift",
+      "rdl",
+      "stiff leg",
+      "good morning",
+      "kettlebell swing",
+      "hip thrust",
+      "glute bridge",
     ],
   },
   /** Core + spinal loading — gated by Trunk Stability Pushup. */
   coreSpinal: {
     patterns: [
-      'core_anti_estensione', 'core_anti_rotazione', 'core_anti_flessione_laterale',
-      'anti-extension', 'anti-rotation', 'anti-lateral flexion',
+      "core_anti_estensione",
+      "core_anti_rotazione",
+      "core_anti_flessione_laterale",
+      "anti-extension",
+      "anti-rotation",
+      "anti-lateral flexion",
     ],
-    targets: ['core', 'spine', 'lower back', 'lombare', 'addominali', 'erettori spinali'],
+    targets: ["core", "spine", "lower back", "lombare", "addominali", "erettori spinali"],
     nameFragments: [
-      'plank', 'rollout', 'ab wheel', 'pallof', 'dead bug', 'hollow body',
-      'l-sit', 'dragon flag', 'hanging leg raise',
+      "plank",
+      "rollout",
+      "ab wheel",
+      "pallof",
+      "dead bug",
+      "hollow body",
+      "l-sit",
+      "dragon flag",
+      "hanging leg raise",
     ],
   },
 } as const;
@@ -199,13 +227,10 @@ type MovementCategory = keyof typeof MOVEMENT_KEYWORDS;
  * a coach can express the prescription however is most natural —
  * pattern-only, tag-only, or name-only.
  */
-function matchesCategory(
-  exercise: ExerciseInfo,
-  category: MovementCategory,
-): boolean {
+function matchesCategory(exercise: ExerciseInfo, category: MovementCategory): boolean {
   const kw = MOVEMENT_KEYWORDS[category];
 
-  const pattern = exercise.movementPattern?.toLowerCase().trim() ?? '';
+  const pattern = exercise.movementPattern?.toLowerCase().trim() ?? "";
   if (pattern && kw.patterns.some((p) => pattern.includes(p))) return true;
 
   const targets = (exercise.targets ?? []).map((t) => t.toLowerCase().trim());
@@ -213,7 +238,7 @@ function matchesCategory(
     return true;
   }
 
-  const name = exercise.name?.toLowerCase().trim() ?? '';
+  const name = exercise.name?.toLowerCase().trim() ?? "";
   if (name && kw.nameFragments.some((f) => name.includes(f))) return true;
 
   return false;
@@ -236,7 +261,7 @@ function matchesCategory(
  */
 function effectiveScore(result: FmsTestResult | undefined): number | null {
   if (!result) return null;
-  if (result.kind === 'bilateral') {
+  if (result.kind === "bilateral") {
     return result.score; // FmsScore | null
   }
   // Asymmetrical: min(L, R), preserving null semantics.
@@ -247,7 +272,7 @@ function effectiveScore(result: FmsTestResult | undefined): number | null {
 
 /** True iff the named clearing test was performed AND produced pain. */
 function clearingTestPositive(
-  results: FmsAssessment['clearingTests'],
+  results: FmsAssessment["clearingTests"],
   id: ClearingTestId,
 ): boolean {
   const r: ClearingTestResult | undefined = results[id];
@@ -296,24 +321,20 @@ function matchingRedFlag(
 function readBodyRegion(flag: RedFlag): string {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const f = flag as any;
-  const candidate =
-    f.bodyRegion ?? f.bodyZone ?? f.region ?? f.area ?? f.location ?? '';
-  return typeof candidate === 'string' ? candidate.toLowerCase().trim() : '';
+  const candidate = f.bodyRegion ?? f.bodyZone ?? f.region ?? f.area ?? f.location ?? "";
+  return typeof candidate === "string" ? candidate.toLowerCase().trim() : "";
 }
 
 /**
  * Collate the exercise's keyword surface for red-flag matching: the
  * canonical category targets plus whatever the caller supplied.
  */
-function collateExerciseSurface(
-  exercise: ExerciseInfo,
-  category: MovementCategory,
-): string[] {
+function collateExerciseSurface(exercise: ExerciseInfo, category: MovementCategory): string[] {
   const fromCategory = [...MOVEMENT_KEYWORDS[category].targets];
   const fromInput = [
     ...(exercise.targets ?? []),
-    exercise.name ?? '',
-    exercise.movementPattern ?? '',
+    exercise.name ?? "",
+    exercise.movementPattern ?? "",
   ]
     .map((s) => s.toLowerCase().trim())
     .filter(Boolean);
@@ -359,7 +380,7 @@ function evaluateGatedPattern(
   // 1) Clearing test pain — overriding HIGH.
   if (clearingTest && clearingTestPositive(assessment.clearingTests, clearingTest.id)) {
     concerns.push({
-      level: 'high',
+      level: "high",
       reason:
         `Test di clearing positivo (${clearingTest.label}): dolore evocato — ` +
         `controindicato il pattern "${gateTestLabel}".`,
@@ -375,14 +396,14 @@ function evaluateGatedPattern(
     // Intentionally no concern emitted.
   } else if (score === 0) {
     concerns.push({
-      level: 'high',
+      level: "high",
       reason:
         `Punteggio FMS ${gateTestLabel} = 0 (dolore o blocco): caricamento ` +
         `controindicato. Richiedere screening clinico.`,
     });
   } else if (score === 1) {
     concerns.push({
-      level: 'moderate',
+      level: "moderate",
       reason:
         `Punteggio FMS ${gateTestLabel} = 1 (pattern disfunzionale): valutare ` +
         `regressione o sostituzione dell'esercizio.`,
@@ -394,9 +415,9 @@ function evaluateGatedPattern(
   //    report in a region this lift loads is HIGH regardless.
   const flag = matchingRedFlag(assessment.redFlags, exercise, category);
   if (flag) {
-    const region = readBodyRegion(flag) || 'zona segnalata';
+    const region = readBodyRegion(flag) || "zona segnalata";
     concerns.push({
-      level: 'high',
+      level: "high",
       reason: `Red flag attivo (${region}): l'esercizio carica una zona dolente.`,
     });
   }
@@ -411,17 +432,15 @@ function evaluateGatedPattern(
  */
 function summarize(concerns: readonly Concern[]): ExerciseRiskAssessment {
   if (concerns.length === 0) {
-    return { isSafe: true, riskLevel: 'low', reasons: [] };
+    return { isSafe: true, riskLevel: "low", reasons: [] };
   }
 
   const severityRank: Record<RiskLevel, number> = { low: 0, moderate: 1, high: 2 };
-  const sorted = [...concerns].sort(
-    (a, b) => severityRank[b.level] - severityRank[a.level],
-  );
+  const sorted = [...concerns].sort((a, b) => severityRank[b.level] - severityRank[a.level]);
   const top = sorted[0].level;
 
   return {
-    isSafe: top === 'low',
+    isSafe: top === "low",
     riskLevel: top,
     reasons: sorted.map((c) => c.reason),
   };
@@ -462,10 +481,10 @@ export function analyzeExerciseRisk(
   if (!latestAssessment) {
     return {
       isSafe: true,
-      riskLevel: 'low',
+      riskLevel: "low",
       reasons: [
-        'Nessuna valutazione FMS disponibile per questo atleta: ' +
-          'analisi del rischio non eseguibile.',
+        "Nessuna valutazione FMS disponibile per questo atleta: " +
+          "analisi del rischio non eseguibile.",
       ],
     };
   }
@@ -480,10 +499,10 @@ export function analyzeExerciseRisk(
     ...evaluateGatedPattern(
       exerciseInfo,
       latestAssessment,
-      'verticalPush',
-      'shoulder_mobility',
-      'Shoulder Mobility',
-      { id: 'shoulder_impingement', label: 'Shoulder Impingement' },
+      "verticalPush",
+      "shoulder_mobility",
+      "Shoulder Mobility",
+      { id: "shoulder_impingement", label: "Shoulder Impingement" },
     ),
   );
 
@@ -494,9 +513,9 @@ export function analyzeExerciseRisk(
     ...evaluateGatedPattern(
       exerciseInfo,
       latestAssessment,
-      'squat',
-      'deep_squat',
-      'Deep Squat',
+      "squat",
+      "deep_squat",
+      "Deep Squat",
       null,
     ),
   );
@@ -508,9 +527,9 @@ export function analyzeExerciseRisk(
     ...evaluateGatedPattern(
       exerciseInfo,
       latestAssessment,
-      'hinge',
-      'active_straight_leg_raise',
-      'Active Straight Leg Raise',
+      "hinge",
+      "active_straight_leg_raise",
+      "Active Straight Leg Raise",
       null,
     ),
   );
@@ -524,10 +543,10 @@ export function analyzeExerciseRisk(
     ...evaluateGatedPattern(
       exerciseInfo,
       latestAssessment,
-      'coreSpinal',
-      'trunk_stability_pushup',
-      'Trunk Stability Pushup',
-      { id: 'spinal_extension', label: 'Spinal Extension' },
+      "coreSpinal",
+      "trunk_stability_pushup",
+      "Trunk Stability Pushup",
+      { id: "spinal_extension", label: "Spinal Extension" },
     ),
   );
 
