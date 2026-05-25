@@ -195,6 +195,29 @@ serve(async (req) => {
     }
 
     // -------------------------------------------------------------------------
+    // 0c. VALIDATE JWT — Security Advisor critical fix.
+    //     We must call auth.getUser() BEFORE the mode branches below.
+    //     Previously the structured modes (meal_suggestion / session_adaptation)
+    //     returned an AI response without ever validating the bearer token,
+    //     so any string in the Authorization header would unlock free AI
+    //     usage. The `if (!authHeader)` check above only verifies presence,
+    //     not validity. This block forces token verification first.
+    // -------------------------------------------------------------------------
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: "Non autorizzato" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // -------------------------------------------------------------------------
     // 1. PARSE & VALIDATE INPUT
     // -------------------------------------------------------------------------
     let body: {
@@ -220,14 +243,15 @@ serve(async (req) => {
     // -------------------------------------------------------------------------
     const mode = typeof body.mode === "string" ? body.mode : null;
     if (mode === "meal_suggestion" || mode === "session_adaptation") {
-      const sysPrompt = mode === "meal_suggestion"
-        ? `You are an elite sports nutritionist. Given the athlete's REMAINING macros for today, propose ONE single meal that fits as closely as possible.
+      const sysPrompt =
+        mode === "meal_suggestion"
+          ? `You are an elite sports nutritionist. Given the athlete's REMAINING macros for today, propose ONE single meal that fits as closely as possible.
 Return STRICT JSON with this exact shape (no markdown, no prose):
 {"name": string, "prepMinutes": number, "imageUrl": string, "protein": number, "fats": number, "carbs": number, "calories": number}
 - Use realistic Italian meal names.
 - imageUrl can be empty string if unknown.
 - All nutrient numbers in grams; calories in kcal as integers.`
-        : `You are an elite Clinical Sports Coach. Given the athlete's READINESS data and today's WORKOUT structure, produce a safer, adapted plan.
+          : `You are an elite Clinical Sports Coach. Given the athlete's READINESS data and today's WORKOUT structure, produce a safer, adapted plan.
 Return STRICT JSON with this exact shape (no markdown):
 {
   "rationale": string,
@@ -236,9 +260,10 @@ Return STRICT JSON with this exact shape (no markdown):
 }
 Keep adaptations <= 5. safePlan should be the new full workout structure.`;
 
-      const userPayload = mode === "meal_suggestion"
-        ? { remainingMacros: body.remainingMacros ?? null }
-        : { readiness: body.readiness ?? null, todayWorkout: body.todayWorkout ?? null };
+      const userPayload =
+        mode === "meal_suggestion"
+          ? { remainingMacros: body.remainingMacros ?? null }
+          : { readiness: body.readiness ?? null, todayWorkout: body.todayWorkout ?? null };
 
       let aiResp: Response;
       try {
@@ -301,7 +326,11 @@ Keep adaptations <= 5. safePlan should be the new full workout structure.`;
       } catch {
         const m = typeof raw === "string" ? raw.match(/\{[\s\S]*\}/) : null;
         if (m) {
-          try { parsed = JSON.parse(m[0]); } catch { parsed = null; }
+          try {
+            parsed = JSON.parse(m[0]);
+          } catch {
+            parsed = null;
+          }
         }
       }
       if (!parsed) {
@@ -328,8 +357,7 @@ Keep adaptations <= 5. safePlan should be the new full workout structure.`;
     // forwarding arbitrary system messages from a malicious client.
     const rawHistory = Array.isArray(body.history) ? body.history : [];
     const history: ChatMessage[] = rawHistory
-      .filter((m): m is { role: unknown; content: unknown } =>
-        m !== null && typeof m === "object")
+      .filter((m): m is { role: unknown; content: unknown } => m !== null && typeof m === "object")
       .map((m) => ({ role: m.role, content: m.content }))
       .filter(
         (m): m is ChatMessage =>
@@ -340,20 +368,10 @@ Keep adaptations <= 5. safePlan should be the new full workout structure.`;
       .slice(-MAX_HISTORY_TURNS);
 
     // -------------------------------------------------------------------------
-    // 2. SUPABASE CLIENT — user-scoped. RLS + auth.uid() inside
-    //    match_knowledge_chunks decide which coach's corpus to retrieve from.
+    // 2. SUPABASE CLIENT — already created and JWT-validated in step 0c above.
+    //    RLS + auth.uid() inside match_knowledge_chunks decide which coach's
+    //    corpus to retrieve from.
     // -------------------------------------------------------------------------
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: "Non autorizzato" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
 
     // -------------------------------------------------------------------------
     // 3. EMBED THE QUERY
@@ -366,21 +384,18 @@ Keep adaptations <= 5. safePlan should be the new full workout structure.`;
     //    We pass the embedding as a JSON-stringified array because PostgREST's
     //    pgvector binding accepts that form. (Same convention as ingest-knowledge.)
     // -------------------------------------------------------------------------
-    const { data: matches, error: matchError } = await supabase.rpc(
-      "match_knowledge_chunks",
-      {
-        query_embedding: JSON.stringify(queryEmbedding) as unknown as string,
-        match_threshold: MATCH_THRESHOLD,
-        match_count: MATCH_COUNT,
-      },
-    );
+    const { data: matches, error: matchError } = await supabase.rpc("match_knowledge_chunks", {
+      query_embedding: JSON.stringify(queryEmbedding) as unknown as string,
+      match_threshold: MATCH_THRESHOLD,
+      match_count: MATCH_COUNT,
+    });
 
     if (matchError) {
       console.error("[ask-copilot] match_knowledge_chunks error:", matchError);
-      return new Response(
-        JSON.stringify({ error: "Errore durante il recupero del contesto" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      return new Response(JSON.stringify({ error: "Errore durante il recupero del contesto" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const chunks: MatchedChunk[] = (matches as MatchedChunk[] | null) ?? [];
@@ -400,13 +415,14 @@ Keep adaptations <= 5. safePlan should be the new full workout structure.`;
     // fall back on world knowledge; if the answer isn't in the manuals, it
     // must say so. Without this instruction RAG quietly devolves into a
     // generic chatbot that hallucinates plausibly.
-    const systemPrompt = chunks.length > 0
-      ? `You are an elite Clinical Sports Copilot. You must answer questions using ONLY the provided context from the coach's proprietary manuals. If the answer is not in the context, say you don't know based on the manuals. Cite the relevant Source numbers inline (e.g. "[Source 2]") when you draw on them. Do not invent facts, do not use external knowledge, and do not speculate.
+    const systemPrompt =
+      chunks.length > 0
+        ? `You are an elite Clinical Sports Copilot. You must answer questions using ONLY the provided context from the coach's proprietary manuals. If the answer is not in the context, say you don't know based on the manuals. Cite the relevant Source numbers inline (e.g. "[Source 2]") when you draw on them. Do not invent facts, do not use external knowledge, and do not speculate.
 
 Context:
 
 ${contextBlock}`
-      : `You are an elite Clinical Sports Copilot. You must answer questions using ONLY the provided context from the coach's proprietary manuals. No relevant context was retrieved for this question. Reply that you don't know based on the manuals and suggest the user rephrase or ask the coach directly. Do not use external knowledge.`;
+        : `You are an elite Clinical Sports Copilot. You must answer questions using ONLY the provided context from the coach's proprietary manuals. No relevant context was retrieved for this question. Reply that you don't know based on the manuals and suggest the user rephrase or ask the coach directly. Do not use external knowledge.`;
 
     const messages = [
       { role: "system" as const, content: systemPrompt },
@@ -472,9 +488,7 @@ ${contextBlock}`
     }
 
     const aiData = await aiResponse.json();
-    const answer: string =
-      aiData?.choices?.[0]?.message?.content ??
-      "";
+    const answer: string = aiData?.choices?.[0]?.message?.content ?? "";
 
     if (!answer) {
       console.error("[ask-copilot] AI returned empty answer", aiData);

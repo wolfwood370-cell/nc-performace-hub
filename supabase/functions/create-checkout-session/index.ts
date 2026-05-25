@@ -13,6 +13,35 @@ const logStep = (step: string, details?: unknown) => {
   console.log(`[CREATE-CHECKOUT] ${step}${d}`);
 };
 
+// Origin whitelist — prevents Stripe success_url / cancel_url being redirected
+// to an attacker domain. Supabase Advisor warning: untrusted Origin header
+// flows directly into Stripe checkout session params, so an attacker could
+// trigger a "checkout success" callback to evil.com after legit payment.
+const LOVABLE_PROJECT_ID = "e1c56229-82db-4ffc-8215-23b357d4c3a9";
+const ALLOWED_HOSTS: string[] = [
+  // Custom production domains can be added here.
+];
+const DEFAULT_ORIGIN = `https://id-preview--${LOVABLE_PROJECT_ID}.lovable.app`;
+
+function isAllowedOrigin(origin: string): boolean {
+  try {
+    const u = new URL(origin);
+    if (u.protocol === "http:" && (u.hostname === "localhost" || u.hostname === "127.0.0.1")) {
+      return true;
+    }
+    if (u.protocol !== "https:") return false;
+    if (
+      u.hostname.endsWith(`--${LOVABLE_PROJECT_ID}.lovable.app`) ||
+      u.hostname === `${LOVABLE_PROJECT_ID}.lovable.app`
+    ) {
+      return true;
+    }
+    return ALLOWED_HOSTS.includes(u.hostname);
+  } catch {
+    return false;
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -20,7 +49,7 @@ serve(async (req) => {
 
   const supabaseClient = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_ANON_KEY") ?? ""
+    Deno.env.get("SUPABASE_ANON_KEY") ?? "",
   );
 
   try {
@@ -50,7 +79,7 @@ serve(async (req) => {
     // Fetch billing plan using service role to bypass RLS
     const adminClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
     );
 
     const { data: plan, error: planError } = await adminClient
@@ -112,7 +141,9 @@ serve(async (req) => {
       .single();
 
     // Find or lookup Stripe customer by athlete's auth email
-    const { data: { user: athleteUser } } = await adminClient.auth.admin.getUserById(targetAthleteId);
+    const {
+      data: { user: athleteUser },
+    } = await adminClient.auth.admin.getUserById(targetAthleteId);
     const athleteEmail = athleteUser?.email;
 
     let customerId: string | undefined;
@@ -125,7 +156,11 @@ serve(async (req) => {
 
     // Create Checkout session
     const isSubscription = plan.billing_interval !== "one_time";
-    const origin = req.headers.get("origin") || "https://lovable.dev";
+    // Validate caller-provided Origin against whitelist (anti-redirect-hijack).
+    // If untrusted / missing → safe project default so Stripe success/cancel
+    // URLs can never be pointed at an attacker domain.
+    const requestOrigin = req.headers.get("origin");
+    const origin = requestOrigin && isAllowedOrigin(requestOrigin) ? requestOrigin : DEFAULT_ORIGIN;
 
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
       customer: customerId,
