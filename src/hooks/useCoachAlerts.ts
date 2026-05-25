@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 
-export interface CoachAlert {
+interface CoachAlert {
   id: string;
   coach_id: string;
   athlete_id: string;
