@@ -96,6 +96,34 @@ Per tutto il resto: **STOP & ASK** quando l'utente menziona "sicurezza" / "vulne
 
 Quando Lovable produce un nuovo pattern security, estrai in §5.x con riferimento al commit/migration di origine.
 
+### 0.6 Vincoli noti Lovable Cloud (confermati da Security Agent)
+
+Findings da sessioni Lovable Security Agent, da NON tentare di ri-fixare:
+
+**`realtime.messages` schema è managed by Supabase — NOT modifiable**
+(Lovable agent response 2026-05-25: "realtime.messages is in Supabase-managed
+schema and not modifiable"). Significa che la migration tentative `69119fc`
+del 2026-05-25 con `CREATE POLICY ON realtime.messages` viene **bloccata**
+al deploy con `insufficient_privilege`. Comportamento atteso, gestito dal
+DO block con exception handling. **Advisor flag #1/#3 "Any authenticated
+user can subscribe to any Realtime channel topic" rimane OPEN per design**
+— l'app è già sicura per `postgres_changes` channels (RLS su tabelle
+source) e non usa Broadcast/Presence al momento.
+
+**`invite_tokens` flow attuale considerato sicuro**
+(Lovable agent response 2026-05-25: "invite_tokens already coach-only with
+server-side redemption"). Le 4 policy `coach_id = auth.uid()` + il trigger
+`handle_new_user` SECURITY DEFINER bypass-RLS sono ritenute sufficienti.
+Il mio commit `207c4b8` (filtro `used=false AND expires_at > now()`) resta
+attivo come hardening extra non strettamente necessario — non danneggia
+nulla perché il flow attuale non legge invite stale dal client.
+
+**Quando incontri uno di questi vincoli in futuri scan Advisor**:
+
+- Marca come "ignored intentional" nella tua risposta all'utente
+- NON proporre fix di iniziativa
+- Riferimento esplicito a questa §0.6
+
 ---
 
 <a id="1-arch"></a>
